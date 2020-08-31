@@ -57,7 +57,7 @@ CFLAGS_vgettimeofday.o += -O3
 GCOV_PROFILE := n
 
 obj-y += vdso.o
-extra-y += vdso.lds
+targets += vdso.lds
 CPPFLAGS_vdso.lds += -P -C -U$(ARCH)
 
 # Force dependency (incbin is bad)
