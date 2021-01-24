@@ -709,6 +709,9 @@ do {									\
  * let gcc optimize the rest.
  */
 
+#ifdef CONFIG_DISABLE_TRACE_PRINTK
+#define trace_printk pr_debug
+#else
 #define trace_printk(fmt, ...)				\
 do {							\
 	char _______STR[] = __stringify((__VA_ARGS__));	\
@@ -717,6 +720,7 @@ do {							\
 	else						\
 		trace_puts(fmt);			\
 } while (0)
+#endif
 
 #define do_trace_printk(fmt, args...)					\
 do {									\
