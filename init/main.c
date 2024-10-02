@@ -1260,7 +1260,4 @@ static noinline void __init kernel_init_freeable(void)
 
 	integrity_load_keys();
 	load_default_modules();
-#ifdef CONFIG_SECURITY_DEFEX
-	defex_load_rules();
-#endif
 }
