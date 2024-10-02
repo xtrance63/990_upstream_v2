@@ -249,7 +249,6 @@ source security/mstdrv/Kconfig
 source security/hdm/Kconfig
 
 source security/integrity/Kconfig
-source security/samsung/five/Kconfig
 
 choice
 	prompt "Default security module"
