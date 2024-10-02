@@ -61,8 +61,6 @@ arm64-obj-$(CONFIG_CRASH_CORE)		+= crash_core.o
 arm64-obj-$(CONFIG_ARM_SDE_INTERFACE)	+= sdei.o
 arm64-obj-$(CONFIG_ARM64_SSBD)		+= ssbd.o
 
-arm64-obj-$(CONFIG_UH)		+= uh_entry.o
-
 obj-y					+= $(arm64-obj-y) vdso/ probes/
 obj-m					+= $(arm64-obj-m)
 head-y					:= head.o
