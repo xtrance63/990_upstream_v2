@@ -815,6 +815,9 @@ int usb_gadget_map_request_by_dev(struct device *dev,
 	if (req->num_sgs) {
 		int     mapped;
 
+		pr_info("%s: req->num_sgs: 0x%x\n", __func__, req->num_sgs);
+		dump_stack();
+
 		mapped = dma_map_sg(dev, req->sg, req->num_sgs,
 				is_in ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
 		if (mapped == 0) {
@@ -823,6 +826,7 @@ int usb_gadget_map_request_by_dev(struct device *dev,
 		}
 
 		req->num_mapped_sgs = mapped;
+		WARN_ON_ONCE(req->num_mapped_sgs);
 	} else {
 		if (is_vmalloc_addr(req->buf)) {
 			dev_err(dev, "buffer is not dma capable\n");
@@ -1359,7 +1363,16 @@ static int udc_bind_to_driver(struct usb_udc *udc, struct usb_gadget_driver *dri
 		driver->unbind(udc->gadget);
 		goto err1;
 	}
-	usb_udc_connect_control(udc);
+
+	/*
+	 * HACK: The Android gadget driver disconnects the gadget
+	 * on bind and expects the gadget to stay disconnected until
+	 * it calls usb_gadget_connect when userspace is ready. Remove
+	 * the call to usb_gadget_connect bellow to avoid enabling the
+	 * pullup before userspace is ready.
+	 *
+	 * usb_udc_connect_control(udc);
+	 */
 
 	kobject_uevent(&udc->dev.kobj, KOBJ_CHANGE);
 	return 0;
