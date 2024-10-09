@@ -13,3 +13,4 @@ obj-$(CONFIG_SCSI_UFS_EXYNOS) += ufs-exynos.o ufs-exynos-dbg.o ufs-cal-9830.o
 obj-$(CONFIG_SCSI_UFS_HISI) += ufs-hisi.o
 ufshcd-core-$(CONFIG_SCSI_UFS_CRYPTO) += ufshcd-crypto.o
 obj-$(CONFIG_SCSI_UFS_EXYNOS) += ufs-perf.o
+obj-$(CONFIG_SCSI_UFS_EXYNOS_FMP) += ufs-exynos-fmp.o

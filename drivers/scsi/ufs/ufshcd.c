@@ -2755,7 +2755,7 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	struct scatterlist *sg;
 	struct scsi_cmnd *cmd;
 	int sg_segments;
-	int i, ret;
+	int i;
 	u32 offset;
 
 #if defined(CONFIG_UFS_DATA_LOG)
@@ -2846,13 +2846,6 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 		}
 	} else {
 		lrbp->utr_descriptor_ptr->prd_table_length = 0;
-	}
-	ret = ufshcd_vops_crypto_engine_cfg(hba, lrbp);
-	if (ret) {
-		dev_err(hba->dev,
-			"%s: failed to configure crypto engine (%d)\n",
-			__func__, ret);
-		return ret;
 	}
 
 	return ufshcd_map_sg_crypto(hba, lrbp);
@@ -3191,7 +3184,6 @@ static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 	int add_tag;
 	int pre_req_err = -EBUSY;
 	int lun = 0;
-	int ret;
 
 	if (cmd && cmd->device)
 		lun = ufshcd_scsi_to_upiu_lun(cmd->device->lun);
@@ -3346,12 +3338,6 @@ out_unlock:
 out:
 #if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSHPB)
 	if (!pre_req_err) {
-		ret = ufshcd_vops_crypto_engine_clear(hba, add_lrbp);
-		if (ret)
-			dev_err(hba->dev,
-				"%s: failed to clear crypto engine (%d)\n",
-				__func__, ret);
-
 		pre_cmd = add_lrbp->cmd;
 		add_lrbp->cmd = NULL;
 		clear_bit_unlock(add_tag, &hba->lrb_in_use);
@@ -6393,12 +6379,6 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba, int reason,
 		cmd = lrbp->cmd;
 		if (cmd) {
 			ufshcd_add_command_trace(hba, index, "complete");
-			result = ufshcd_vops_crypto_engine_clear(hba, lrbp);
-			if (result) {
-				dev_err(hba->dev,
-					"%s: failed to clear crypto engine (%d)\n",
-					__func__, result);
-			}
 			result = ufshcd_transfer_rsp_status(hba, lrbp);
 			
 			if (ufshcd_is_tw_on(hba) && (rq_data_dir(cmd->request) == WRITE)) {
@@ -7569,15 +7549,6 @@ static int ufshcd_abort(struct scsi_cmnd *cmd)
 	ufshcd_hold(hba, false);
 	/* Dump debugging information to system memory */
 	ufshcd_vops_dbg_register_dump(hba);
-
-	/* check smu abort */
-	err = ufshcd_vops_access_control_abort(hba);
-	if (err == ACCESS_CONTROL_ABORT)
-		dev_err(hba->dev, "%s: Access Control Abort, newly initialized",
-					__func__);
-	else if (err && (err != ACCESS_CONTROL_ABORT))
-		dev_err(hba->dev, "%s: Fail to check Access Control status (%d)",
-					__func__, err);
 
 	reg = ufshcd_readl(hba, REG_UTP_TRANSFER_REQ_DOOR_BELL);
 	/* If command is already aborted/completed, return SUCCESS */

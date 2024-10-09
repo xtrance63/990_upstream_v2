@@ -412,11 +412,6 @@ struct ufs_hba_variant_ops {
 	int	(*phy_initialization)(struct ufs_hba *);
 	int	(*program_key)(struct ufs_hba *hba,
 		const union ufs_crypto_cfg_entry *cfg, int slot);
-	int	(*crypto_engine_cfg)(struct ufs_hba *hba,
-					struct ufshcd_lrb *lrbp);
-	int	(*crypto_engine_clear)(struct ufs_hba *hba,
-					struct ufshcd_lrb *lrbp);
-	int	(*crypto_sec_cfg)(struct ufs_hba *hba, bool init);
 	int	(*access_control_abort)(struct ufs_hba *hba);
 	void	(*perf_mode)(struct ufs_hba *, struct scsi_cmnd *);
 };
@@ -1419,36 +1414,6 @@ static inline u8 ufshcd_scsi_to_upiu_lun(unsigned int scsi_lun)
 
 int ufshcd_dump_regs(struct ufs_hba *hba, size_t offset, size_t len,
 		     const char *prefix);
-
-static inline int ufshcd_vops_crypto_engine_cfg(struct ufs_hba *hba,
-					struct ufshcd_lrb *lrbp)
-{
-	if (hba->vops && hba->vops->crypto_engine_cfg)
-		return hba->vops->crypto_engine_cfg(hba, lrbp);
-	return 0;
-}
-
-static inline int ufshcd_vops_crypto_engine_clear(struct ufs_hba *hba,
-					struct ufshcd_lrb *lrbp)
-{
-	if (hba->vops && hba->vops->crypto_engine_clear)
-		return hba->vops->crypto_engine_clear(hba, lrbp);
-	return 0;
-}
-
-static inline int ufshcd_vops_access_control_abort(struct ufs_hba *hba)
-{
-	if (hba->vops && hba->vops->access_control_abort)
-		return hba->vops->access_control_abort(hba);
-	return 0;
-}
-
-static inline int ufshcd_vops_crypto_sec_cfg(struct ufs_hba *hba, bool init)
-{
-	if (hba->vops && hba->vops->crypto_sec_cfg)
-		return hba->vops->crypto_sec_cfg(hba, init);
-	return 0;
-}
 
 static inline void ufshcd_vops_perf_mode(struct ufs_hba *hba, struct scsi_cmnd *cmd)
 {

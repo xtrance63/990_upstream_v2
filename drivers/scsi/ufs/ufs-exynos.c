@@ -750,7 +750,8 @@ static void exynos_ufs_set_features(struct ufs_hba *hba, u32 hw_rev)
 	/* quirks of common driver */
 	hba->quirks = UFSHCD_QUIRK_PRDT_BYTE_GRAN |
 			UFSHCD_QUIRK_UNRESET_INTR_AGGR |
-			UFSHCD_QUIRK_BROKEN_REQ_LIST_CLR;
+			UFSHCD_QUIRK_BROKEN_REQ_LIST_CLR |
+			UFSHCD_QUIRK_BROKEN_CRYPTO;
 
 	/* quirks of exynos-specific driver */
 }
@@ -822,6 +823,10 @@ static int exynos_ufs_init(struct ufs_hba *hba)
 		ufs->smu = SMU_ID_MAX;
 	else
 		ufs->smu = id;
+
+#ifdef CONFIG_SCSI_UFS_EXYNOS_FMP
+	exynos_ufs_fmp_config(hba, 1);
+#endif
 
 	/* Enable log */
 	ret =  exynos_ufs_init_dbg(hba);
@@ -1169,6 +1174,10 @@ static int __exynos_ufs_resume(struct ufs_hba *hba, enum ufs_pm_op pm_op)
 	if (ufshcd_is_clkgating_allowed(hba))
 		clk_prepare_enable(ufs->clk_hci);
 	exynos_ufs_ctrl_auto_hci_clk(ufs, false);
+
+#ifdef CONFIG_SCSI_UFS_EXYNOS_FMP
+	exynos_ufs_fmp_config(hba, 0);
+#endif	
 
 	exynos_ufs_ctrl_cport_log(ufs, true, 0);
 

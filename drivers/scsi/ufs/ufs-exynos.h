@@ -670,6 +670,7 @@ extern void exynos_ufs_dump_cport_log(struct ufs_hba *hba);
 extern void exynos_ufs_show_uic_info(struct ufs_hba *hba);
 extern void exynos_ufs_cmd_log_start(struct ufs_hba *hba, struct scsi_cmnd *cmd);
 extern void exynos_ufs_cmd_log_end(struct ufs_hba *hba, int tag);
+void exynos_ufs_fmp_config(struct ufs_hba *hba, bool init);
 
 #ifndef __EXYNOS_UFS_VS_DEBUG__
 #define __EXYNOS_UFS_VS_DEBUG__
