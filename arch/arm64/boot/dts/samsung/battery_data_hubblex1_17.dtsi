@@ -36,13 +36,13 @@
 				battery,wpc_lcd_on_high_temp = <400>;
 				battery,wpc_lcd_on_high_temp_rec = <380>;
 
-				battery,chg_high_temp = <470>;
-				battery,chg_high_temp_recovery = <450>;
+				battery,chg_high_temp = <600>;
+				battery,chg_high_temp_recovery = <580>;
 
-				battery,dchg_high_temp = <500>;
-				battery,dchg_high_temp_recovery = <440>;
-				battery,dchg_high_batt_temp = <400>;
-				battery,dchg_high_batt_temp_recovery = <380>;
+				battery,dchg_high_temp = <1000 1000 570 570>;
+				battery,dchg_high_temp_recovery = <1000 1000 530 530>;
+				battery,dchg_high_batt_temp = <1000 1000 1000 400>;
+				battery,dchg_high_batt_temp_recovery = <1000 1000 1000 390>;
 
 				/* swelling current */
 				battery,swelling_low_temp_current = <900>;	/* 0.24C */

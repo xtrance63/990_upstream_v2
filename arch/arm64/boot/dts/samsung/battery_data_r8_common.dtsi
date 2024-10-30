@@ -50,6 +50,7 @@
 				battery,chg_temp_check_type = <2>;
 				battery,wpc_temp_check_type = <2>;
 				battery,dchg_temp_check_type = <2>;
+				battery,lrp_temp_check_type = <0>;
 
 				battery,thermal_source = <2>; /* SEC_BATTERY_THERMAL_SOURCE_ADC */
 				battery,usb_thermal_source = <2>;
@@ -142,10 +143,10 @@
 				battery,chg_high_temp = <470>;
 				battery,chg_high_temp_recovery = <450>;
 
-				battery,dchg_high_temp = <520>;
-				battery,dchg_high_temp_recovery = <460>;
-				battery,dchg_high_batt_temp = <400>;
-				battery,dchg_high_batt_temp_recovery = <380>;
+				battery,dchg_high_temp = <1000 1000 520 520>;
+				battery,dchg_high_temp_recovery = <1000 1000 460 460>;
+				battery,dchg_high_batt_temp = <1000 1000 400 400>;
+				battery,dchg_high_batt_temp_recovery = <1000 1000 380 380>;
 
 				battery,chg_input_limit_current = <1000>;
 				battery,chg_charging_limit_current = <1900>;

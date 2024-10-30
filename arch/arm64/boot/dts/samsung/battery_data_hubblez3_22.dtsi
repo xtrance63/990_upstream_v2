@@ -59,13 +59,13 @@
 				battery,max_charging_charge_power = <45000>; /* 45W */
 				battery,battery_full_capacity = <5000>;
 
-				battery,chg_high_temp = <550>;
-				battery,chg_high_temp_recovery = <530>;
+				battery,chg_high_temp = <600>;
+				battery,chg_high_temp_recovery = <580>;
 
-				battery,dchg_high_temp = <550>;
-				battery,dchg_high_temp_recovery = <420>;
-				battery,dchg_high_batt_temp = <400>;
-				battery,dchg_high_batt_temp_recovery = <390>;
+				battery,dchg_high_temp = <1000 570 570 570>;
+				battery,dchg_high_temp_recovery = <1000 530 530 530>;
+				battery,dchg_high_batt_temp = <1000 410 1000 400>;
+				battery,dchg_high_batt_temp_recovery = <1000 400 1000 390>;
 
 				battery,wpc_high_temp = <370>;
 				battery,wpc_high_temp_recovery = <350>;
@@ -80,6 +80,7 @@
 
 				battery,snkcap_data = /bits/ 8 <0x04 0x2C 0x91 0x01 0x36 0xC8 0xD0 0x02 0x00 0xC8 0x90
 								0x41 0x8B 0x51 0x21 0xDC 0xC0>;
+				battery,temp_table_LRP_45W = <410 400 390 380 400 380 380 360 1700 3400 1100 2200>;
 			};
 
 			max77705-fuelgauge {

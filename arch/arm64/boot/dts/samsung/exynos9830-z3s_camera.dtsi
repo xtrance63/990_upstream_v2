@@ -1093,7 +1093,7 @@
 		mcu_sensor_index = <0>;
 
 		max_supported_camera = <8>;
-		supported_cameraId = <0 2 3 20 21 23 50 80>;
+		supported_cameraId = <0 1 2 20 21 23 50 80>;
 		ois_gyro_list = <0x01 0x00 0x01 0x00 0x01>;
 		/*
 		* Wide(0)
