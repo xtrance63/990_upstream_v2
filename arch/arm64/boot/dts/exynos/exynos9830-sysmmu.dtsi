@@ -48,7 +48,7 @@
 
 		sysmmu,hold-rpm-on-boot;
 		sysmmu,secure-irq;
-		sysmmu,secure_base = <0x19150000>;
+		sysmmu,secure_base = <0x19140000>;
 		sysmmu,tlb_property =
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_READ(0x0) | SYSMMU_BL1) SYSMMU_NOID>,
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_READ(0x1) | SYSMMU_BL1) SYSMMU_ID_MASK(0x4,  0x1C)>,
@@ -69,7 +69,7 @@
 		qos = <15>;
 
 		sysmmu,secure-irq;
-		sysmmu,secure_base = <0x19190000>;
+		sysmmu,secure_base = <0x19150000>;
 		sysmmu,tlb_property =
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_READ(0x0)  | SYSMMU_BL1) SYSMMU_NOID>,
 			<(SYSMMU_PORT_PREFETCH_PREDICTION_READ(0x1)  | SYSMMU_BL1) SYSMMU_ID_MASK(0x4,  0x1C)>,

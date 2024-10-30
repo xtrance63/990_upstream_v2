@@ -69,7 +69,7 @@
 
 	chosen: chosen {
 //		bootargs = "earlycon=exynos4210,0x10540000 console=ttySAC0,115200n8 root=/dev/ram0 rw ramdisk=8192 initrd=0x84000000,8M init=/linuxrc mem=512M clk_ignore_unused";
-		bootargs = "androidboot.hardware=exynos990 bcm_setup=0xffffff80f8e00000 firmware_class.path=/vendor/firmware reserve-fimc=0xffffff90f9fe0000 nohugeiomap epx_activate=true fpsimd_check_context=y rcupdate.rcu_expedited=1 corememsize=8G cgroup.memory=nokmem";
+		bootargs = "androidboot.hardware=exynos990 bcm_setup=0xffffff80f8e00000 firmware_class.path=/vendor/firmware reserve-fimc=0xffffff90f9fe0000 nohugeiomap epx_activate=true fpsimd_check_context=y rcupdate.rcu_expedited=1 corememsize=8G cgroup.memory=nokmem loop.max_part=7";
 		linux,initrd-start = <0x84000000>;
 		linux,initrd-end = <0x841FFFFF>;
 	};

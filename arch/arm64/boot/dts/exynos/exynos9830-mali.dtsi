@@ -9,6 +9,8 @@
  * published by the Free Software Foundation.
  */
 
+#include "dt-bindings/soc/samsung/exynos9830-devfreq.h"
+
 /{
 	/* mali */
 	mali: mali@18500000 {
@@ -92,5 +94,6 @@
 		gpu_vk_boost_mif_min_lock = <1014000>;
 		gpu_bts_support = <1>;
 		gpu_neg_boost_clock = <377000>;
+		gpu_ess_id_type = <ESS_FLAG_G3D>;
 	};
 };

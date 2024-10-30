@@ -265,8 +265,8 @@
 				default_mode = <0>;
 				/* <xres : yres : fps : lp_ref : dsc_en : slice_w : slice_h> */
 				display_mode = <1440 3040 60 2877 1 720 40>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <5400000>;	/* 540 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -317,8 +317,8 @@
 							 <720 1600 48 11404 1 360 80>,
 							 <720 1600 120 11404 1 360 80>,
 							 <720 1600 96 11404 1 360 80>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -370,8 +370,8 @@
 					<720 1544 96 9509 1 360 193>,
 					<720 1544 60 9509 1 360 193>,
 					<720 1544 48 9509 1 360 193>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -413,8 +413,8 @@
 				mres_dsc_en = <1>;
 				default_mode = <0>;
 				display_mode = <1080 2400 60 10317 1 540 40>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -451,8 +451,8 @@
 				default_mode = <0>;
 
 				display_mode = <1080 2400 60 7530 0 540 40>;	/* w, h, fps, lpref, dsc_en, slice_w, slice,h */
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -489,8 +489,8 @@
 				default_mode = <0>;
 
 				display_mode = <1080 2340 60 7530 1 540 117>;	/* w, h, fps, lpref, dsc_en, slice_w, slice,h */
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -682,8 +682,8 @@
 				mres_en = <0>;
 				default_mode = <0>;
 				display_mode = <1080 2400 60 1653 0 0 0>;	/* w, h, fps, lpref, dsc_en, slice_w, slice,h */
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -722,8 +722,8 @@
 				display_mode =
 					<1080 2400 120 1770 1 540 40>,	/* w, h, fps, lpref, dsc_en, slice_w, slice,h */
 					<1080 2400 60 7494 1 540 40>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */
@@ -762,8 +762,8 @@
 				display_mode =
 					<1080 2400 120 1770 1 540 40>,	/* w, h, fps, lpref, dsc_en, slice_w, slice,h */
 					<1080 2400 60 7494 1 540 40>;
-				hdr_num = <2>;			/* max: 4 */
-				hdr_type = <2 3 0 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
+				hdr_num = <3>;			/* max: 4 */
+				hdr_type = <2 3 4 0>;		/* 1: DOLBY_VISION, 2: HDR10, 3: HLG */
 				hdr_max_luma = <4000000>;	/* 400 */
 				hdr_max_avg_luma = <1200000>;	/* 120 */
 				hdr_min_luma = <5>;		/* 0.0005 */

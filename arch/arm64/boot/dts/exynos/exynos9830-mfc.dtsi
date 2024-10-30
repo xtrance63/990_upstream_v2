@@ -70,6 +70,9 @@
 		/* Dithering option for 8bit display device */
 		dithering_enable = <0>;
 
+		/* Encoder time stamp delta */
+		enc_ts_delta = <1 0x211208>;
+
 		/* Formats */
 		support_10bit = <1>;
 		support_422 = <1>;
