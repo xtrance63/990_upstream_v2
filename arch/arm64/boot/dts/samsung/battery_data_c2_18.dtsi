@@ -35,13 +35,13 @@
 				battery,swelling_drop_float_voltage = <4150>;
 				battery,swelling_high_rechg_voltage = <4000>;
 
-				battery,chg_high_temp = <470>;
-				battery,chg_high_temp_recovery = <450>;
+				battery,chg_high_temp = <600>;
+				battery,chg_high_temp_recovery = <580>;
 
-				battery,dchg_high_temp = <550>;
-				battery,dchg_high_temp_recovery = <420>;
-				battery,dchg_high_batt_temp = <400>;
-				battery,dchg_high_batt_temp_recovery = <390>;
+				battery,dchg_high_temp = <1000 1000 570 570>;
+				battery,dchg_high_temp_recovery = <1000 1000 530 530>;
+				battery,dchg_high_batt_temp = <1000 1000 1000 400>;
+				battery,dchg_high_batt_temp_recovery = <1000 1000 1000 390>;
 
 				battery,battery_full_capacity = <4000>;
 
