@@ -157,22 +157,6 @@ config SCSI_UFS_EXYNOS
 
 	  If unsure, say N.
 
-config SCSI_UFS_FMP_DUMP
-	tristate "EXYNOS Flash Memory Protector Dump for UFS Host"
-	depends on SCSI_UFSHCD && SCSI_UFSHCD_PLATFORM
-	---help---
-	  This selects the EXYNOS UFS FMP DUMP.
-
-config SCSI_UFS_EXYNOS_FMP
-	tristate "EXYNOS Flash Memory Protector for UFS Host"
-	depends on SCSI_UFS_EXYNOS
-	---help---
-	  This selects the EXYNOS UFS FMP Driver.
-
-	  If you have a controller with this interface, say Y or M here.
-
-	  If unsure, say N.
-
 config SCSI_UFS_HISI
 	tristate "Hisilicon specific hooks to UFS controller platform driver"
 	depends on (ARCH_HISI || COMPILE_TEST) && SCSI_UFSHCD_PLATFORM
