@@ -924,7 +924,7 @@ static int wake_lock_get(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
 	struct device *dev = cmpnt->dev;
 	struct abox_data *data = dev_get_drvdata(dev);
-	unsigned int val = data->ws.active;
+	unsigned int val = data->ws->active;
 
 	dev_dbg(dev, "%s: %u\n", __func__, val);
 
@@ -944,9 +944,9 @@ static int wake_lock_put(struct snd_kcontrol *kcontrol,
 	dev_info(dev, "%s(%u)\n", __func__, val);
 
 	if (val)
-		__pm_stay_awake(&data->ws);
+		__pm_stay_awake(data->ws);
 	else
-		__pm_relax(&data->ws);
+		__pm_relax(data->ws);
 
 	return 0;
 }
@@ -5494,7 +5494,7 @@ static int cmpnt_probe(struct snd_soc_component *cmpnt)
 	abox_vdma_register_card(dev);
 	abox_dump_init(dev);
 
-	wakeup_source_init(&data->ws, "abox");
+	data->ws = wakeup_source_register(NULL, "abox");
 
 	return 0;
 }
@@ -5506,7 +5506,7 @@ static void cmpnt_remove(struct snd_soc_component *cmpnt)
 
 	dev_dbg(dev, "%s\n", __func__);
 
-	wakeup_source_trash(&data->ws);
+	wakeup_source_unregister(data->ws);
 }
 
 static const struct snd_soc_component_driver abox_cmpnt_drv = {

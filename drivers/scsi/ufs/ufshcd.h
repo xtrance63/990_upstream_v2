@@ -217,6 +217,9 @@ struct ufs_pm_lvl_states {
  * @intr_cmd: Interrupt command (doesn't participate in interrupt aggregation)
  * @issue_time_stamp: time stamp for debug purposes
  * @compl_time_stamp: time stamp for statistics
+ * @crypto_enable: whether or not the request needs inline crypto operations
+ * @crypto_key_slot: the key slot to use for inline crypto
+ * @data_unit_num: the data unit number for the first block for inline crypto
  * @req_abort_skip: skip request abort task flag
  */
 struct ufshcd_lrb {
@@ -241,6 +244,9 @@ struct ufshcd_lrb {
 	bool intr_cmd;
 	ktime_t issue_time_stamp;
 	ktime_t compl_time_stamp;
+	bool crypto_enable;
+	u8 crypto_key_slot;
+	u64 data_unit_num;
 
 	dma_addr_t backup_addr[256];
 	u32 backup_size[256];
@@ -406,6 +412,28 @@ struct ufs_hba_variant_ops {
 	int	(*crypto_sec_cfg)(struct ufs_hba *hba, bool init);
 	int	(*access_control_abort)(struct ufs_hba *hba);
 	void	(*perf_mode)(struct ufs_hba *, struct scsi_cmnd *);
+};
+
+struct keyslot_mgmt_ll_ops;
+struct ufs_hba_crypto_variant_ops {
+	void (*setup_rq_keyslot_manager)(struct ufs_hba *hba,
+					 struct request_queue *q);
+	void (*destroy_rq_keyslot_manager)(struct ufs_hba *hba,
+					   struct request_queue *q);
+	int (*hba_init_crypto)(struct ufs_hba *hba,
+			       const struct keyslot_mgmt_ll_ops *ksm_ops);
+	void (*enable)(struct ufs_hba *hba);
+	void (*disable)(struct ufs_hba *hba);
+	int (*suspend)(struct ufs_hba *hba, enum ufs_pm_op pm_op);
+	int (*resume)(struct ufs_hba *hba, enum ufs_pm_op pm_op);
+	int (*debug)(struct ufs_hba *hba);
+	int (*prepare_lrbp_crypto)(struct ufs_hba *hba,
+				   struct scsi_cmnd *cmd,
+				   struct ufshcd_lrb *lrbp);
+	int (*complete_lrbp_crypto)(struct ufs_hba *hba,
+				    struct scsi_cmnd *cmd,
+				    struct ufshcd_lrb *lrbp);
+	void *priv;
 };
 
 /* clock gating state  */
@@ -719,6 +747,11 @@ struct SEC_UFS_HPB_info {
  * @is_urgent_bkops_lvl_checked: keeps track if the urgent bkops level for
  *  device is known or not.
  * @scsi_block_reqs_cnt: reference counting for scsi block requests
+ * @crypto_capabilities: Content of crypto capabilities register (0x100)
+ * @crypto_cap_array: Array of crypto capabilities
+ * @crypto_cfg_register: Start of the crypto cfg array
+ * @crypto_cfgs: Array of crypto configurations (i.e. config for each slot)
+ * @ksm: the keyslot manager tied to this hba
  */
 struct ufs_hba {
 	void __iomem *mmio_base;
@@ -773,6 +806,7 @@ struct ufs_hba {
 	u32 ufs_version;
 	const struct ufs_hba_variant_ops *vops;
 	void *priv;
+	const struct ufs_hba_crypto_variant_ops *crypto_vops;
 	unsigned int irq;
 	bool is_irq_enabled;
 
@@ -840,13 +874,22 @@ struct ufs_hba {
 	 */
 	#define UFSHCI_QUIRK_BROKEN_HCE				0x400
 
-	#define UFSHCD_QUIRK_GET_GENERRCODE_DIRECT		0x800
+	/*
+	 * This quirk needs to be enabled if the host controller advertises
+	 * inline encryption support but it doesn't work correctly.
+	 */
+	#define UFSHCD_QUIRK_BROKEN_CRYPTO			0x800
 
-	#define UFSHCD_QUIRK_UNRESET_INTR_AGGR			0x1000
+	/*
+	 * Unknown Quirks from Samsung
+	 */
+	#define UFSHCD_QUIRK_GET_GENERRCODE_DIRECT		0x1000
 
-	#define UFSHCD_QUIRK_GET_UPMCRS_DIRECT			0x2000
+	#define UFSHCD_QUIRK_UNRESET_INTR_AGGR			0x2000
 
-	#define UFSHCD_QUIRK_DUMP_DEBUG_INFO			0x4000
+	#define UFSHCD_QUIRK_GET_UPMCRS_DIRECT			0x4000
+
+	#define UFSHCD_QUIRK_DUMP_DEBUG_INFO			0x8000
 
 	unsigned int quirks;	/* Deviations from standard UFSHCI spec. */
 
@@ -930,6 +973,17 @@ struct ufs_hba {
 	 * the performance of ongoing read/write operations.
 	 */
 #define UFSHCD_CAP_KEEP_AUTO_BKOPS_ENABLED_EXCEPT_SUSPEND (1 << 5)
+	/*
+	 * This capability allows host controller driver to automatically
+	 * enable runtime power management by itself instead of waiting
+	 * for userspace to control the power management.
+	 */
+#define UFSHCD_CAP_RPM_AUTOSUSPEND (1 << 6)
+	/*
+	 * This capability allows the host controller driver to use the
+	 * inline crypto engine, if it is present
+	 */
+#define UFSHCD_CAP_CRYPTO (1 << 7)
 
 	/* Allow only hibern8 without clk gating */
 #define UFSHCD_CAP_FAKE_CLK_GATING (1 << 6)
@@ -959,6 +1013,14 @@ struct ufs_hba {
 	struct rw_semaphore clk_scaling_lock;
 	struct ufs_desc_size desc_size;
 	atomic_t scsi_block_reqs_cnt;
+#ifdef CONFIG_SCSI_UFS_CRYPTO
+	/* crypto */
+	union ufs_crypto_capabilities crypto_capabilities;
+	union ufs_crypto_cap_entry *crypto_cap_array;
+	u32 crypto_cfg_register;
+	union ufs_crypto_cfg_entry *crypto_cfgs;
+	struct keyslot_manager *ksm;
+#endif /* CONFIG_SCSI_UFS_CRYPTO */
 	struct ufs_secure_log secure_log;
 #if defined(CONFIG_UFSFEATURE) && defined(CONFIG_UFSHPB)
 	struct SEC_UFS_HPB_info SEC_hpb_info;
@@ -999,6 +1061,10 @@ static inline int ufshcd_is_clkscaling_supported(struct ufs_hba *hba)
 static inline bool ufshcd_can_autobkops_during_suspend(struct ufs_hba *hba)
 {
 	return hba->caps & UFSHCD_CAP_AUTO_BKOPS_SUSPEND;
+}
+static inline bool ufshcd_is_rpm_autosuspend_allowed(struct ufs_hba *hba)
+{
+	return hba->caps & UFSHCD_CAP_RPM_AUTOSUSPEND;
 }
 
 static inline bool ufshcd_is_intr_aggr_allowed(struct ufs_hba *hba)

@@ -450,7 +450,7 @@ struct abox_data {
 	enum audio_mode audio_mode;
 	enum abox_call_event call_event;
 	enum sound_type sound_type;
-	struct wakeup_source ws;
+	struct wakeup_source *ws;
 	enum modem_event vss_state;
 };
 

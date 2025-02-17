@@ -363,7 +363,10 @@ int init_wsm(struct device *dev)
 			goto out_srpmb_unregister_pm;
 		}
 
-		wakeup_source_init(&rpmb_ctx->wakesrc, "srpmb");
+		memset(&rpmb_ctx->wakesrc, 0, sizeof(rpmb_ctx->wakesrc));
+		(&rpmb_ctx->wakesrc)->name = "srpmb";
+		wakeup_source_add(&rpmb_ctx->wakesrc);
+
 		spin_lock_init(&rpmb_ctx->lock);
 		INIT_WORK(&rpmb_ctx->work, srpmb_worker);
 

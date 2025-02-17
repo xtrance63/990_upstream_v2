@@ -565,7 +565,7 @@ struct pca9468_platform_data {
  * @debug_address: debug register address
  */
 struct pca9468_charger {
-	struct wakeup_source	monitor_wake_lock;
+	struct wakeup_source	*monitor_wake_lock;
 	struct mutex		lock;
 	struct mutex		i2c_lock;
 	struct device		*dev;

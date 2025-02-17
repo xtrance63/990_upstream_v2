@@ -996,7 +996,7 @@ static int pca9468_stop_charging(struct pca9468_charger *pca9468)
 		pca9468->timer_id = TIMER_ID_NONE;
 		pca9468->timer_period = 0;
 		mutex_unlock(&pca9468->lock);
-		__pm_relax(&pca9468->monitor_wake_lock);
+		__pm_relax(pca9468->monitor_wake_lock);
 
 		/* Clear parameter */
 #if defined(CONFIG_BATTERY_SAMSUNG)
@@ -3427,7 +3427,7 @@ static int pca9468_start_direct_charging(struct pca9468_charger *pca9468)
 	}
 #endif
 	/* wake lock */
-	__pm_stay_awake(&pca9468->monitor_wake_lock);
+	__pm_stay_awake(pca9468->monitor_wake_lock);
 
 	/* Preset charging configuration and TA condition */
 	ret = pca9468_preset_dcmode(pca9468);
@@ -4841,7 +4841,7 @@ static int pca9468_charger_probe(struct i2c_client *client,
 	pca9468_chg->wdt_kick = false;
 #endif
 
-	wakeup_source_init(&pca9468_chg->monitor_wake_lock, "pca9468-charger-monitor");
+	pca9468_chg->monitor_wake_lock = wakeup_source_register(pca9468_chg->dev, "pca9468-charger-monitor");
 
 	/* initialize work */
 	INIT_DELAYED_WORK(&pca9468_chg->timer_work, pca9468_timer_work);
@@ -4927,7 +4927,7 @@ static int pca9468_charger_probe(struct i2c_client *client,
 err_power_supply_regsister:
 err_hw_init:
 err_regmap_init:
-	wakeup_source_trash(&pca9468_chg->monitor_wake_lock);
+	wakeup_source_remove(pca9468_chg->monitor_wake_lock);
 	return ret;
 #endif
 }
@@ -4943,7 +4943,7 @@ static int pca9468_charger_remove(struct i2c_client *client)
 		gpio_free(pca9468_chg->pdata->irq_gpio);
 	}
 
-	wakeup_source_trash(&pca9468_chg->monitor_wake_lock);
+	wakeup_source_remove(pca9468_chg->monitor_wake_lock);
 #if defined(CONFIG_BATTERY_SAMSUNG)
 	if (pca9468_chg->psy_chg)
 		power_supply_unregister(pca9468_chg->psy_chg);
