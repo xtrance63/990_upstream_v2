@@ -1585,10 +1585,10 @@ static int do_checkpoint(struct f2fs_sb_info *sbi, struct cp_control *cpc)
 	f2fs_wait_on_all_pages_writeback(sbi);
 
 	/*
-	 * invalidate intermediate page cache borrowed from meta inode
-	 * which are used for migration of encrypted inode's blocks.
+	 * invalidate intermediate page cache borrowed from meta inode which are
+	 * used for migration of encrypted or verity inode's blocks.
 	 */
-	if (f2fs_sb_has_encrypt(sbi))
+	if (f2fs_sb_has_encrypt(sbi) || f2fs_sb_has_verity(sbi))
 		invalidate_mapping_pages(META_MAPPING(sbi),
 				MAIN_BLKADDR(sbi), MAX_BLKADDR(sbi) - 1);
 
@@ -1828,17 +1828,17 @@ static int __write_checkpoint_sync(struct f2fs_sb_info *sbi,
 	struct cp_control cpc = { .reason = CP_SYNC, };
 	int err;
 
-	if (!mutex_trylock(&sbi->gc_mutex)) {
+	if (!down_write_trylock(&sbi->gc_lock)) {
 		if (!wait_lock)
 			return -EBUSY;
 
-		mutex_lock(&sbi->gc_mutex);
+		down_write(&sbi->gc_lock);
 	}
 
 	set_cmd_start_time(cmd);
 	err = f2fs_write_checkpoint(sbi, &cpc);
 	set_cmd_complete_time(cmd);
-	mutex_unlock(&sbi->gc_mutex);
+	up_write(&sbi->gc_lock);
 
 	return err;
 }

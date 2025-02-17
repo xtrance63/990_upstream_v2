@@ -1646,6 +1646,14 @@ static void poll_iocb_unlock_wq(struct poll_iocb *req)
 	rcu_read_unlock();
 }
 
+static void aio_poll_put_work(struct work_struct *work)
+{
+	struct poll_iocb *req = container_of(work, struct poll_iocb, work);
+	struct aio_kiocb *iocb = container_of(req, struct aio_kiocb, poll);
+
+	iocb_put(iocb);
+}
+
 static void aio_poll_complete_work(struct work_struct *work)
 {
 	struct poll_iocb *req = container_of(work, struct poll_iocb, work);
@@ -1736,12 +1744,25 @@ static int aio_poll_wake(struct wait_queue_entry *wait, unsigned mode, int sync,
 	 */
 	if (mask && !req->work_scheduled &&
 		spin_trylock_irqsave(&iocb->ki_ctx->ctx_lock, flags)) {
+		struct kioctx *ctx = iocb->ki_ctx;
 
+		/*
+		 * Try to complete the iocb inline if we can. Use
+		 * irqsave/irqrestore because not all filesystems (e.g. fuse)
+		 * call this function with IRQs disabled and because IRQs
+		 * have to be disabled before ctx_lock is obtained.
+		 */
 		list_del_init(&req->wait.entry);
 		list_del(&iocb->ki_list);
 		iocb->ki_res.res = mangle_poll(mask);
-		spin_unlock_irqrestore(&iocb->ki_ctx->ctx_lock, flags);
-		iocb_put(iocb);
+		if (iocb->ki_eventfd && eventfd_signal_count()) {
+			iocb = NULL;
+			INIT_WORK(&req->work, aio_poll_put_work);
+			schedule_work(&req->work);
+		}
+		spin_unlock_irqrestore(&ctx->ctx_lock, flags);
+		if (iocb)
+			iocb_put(iocb);
 	} else {
 		/*
 		 * Schedule the completion work if needed.  If it was already
