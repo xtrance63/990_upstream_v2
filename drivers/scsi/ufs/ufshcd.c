@@ -7900,16 +7900,12 @@ static int ufshcd_host_reset_and_restore(struct ufs_hba *hba)
 	hba->ufshcd_state = UFSHCD_STATE_RESET;
 	ufshcd_set_eh_in_progress(hba);
 	ufshcd_hba_stop(hba, false);
-<<<<<<< HEAD
 #if defined(CONFIG_UFSFEATURE)
 	ufsf_hpb_reset_host(&hba->ufsf);
 #endif
-||||||| c03c45ef975e
-=======
 	hba->silence_err_logs = true;
 	ufshcd_complete_requests(hba);
 	hba->silence_err_logs = false;
->>>>>>> 4dc4199770a362868459b54ca887e5ac6022b309
 	spin_unlock_irqrestore(hba->host->host_lock, flags);
 
 	/* scale up clocks to max frequency before full reinitialization */
@@ -7950,6 +7946,7 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
 {
 	int err = 0;
 	int retries = MAX_HOST_RESET_RETRIES;
+	unsigned long flags;
 
 	int tag;
 
@@ -7971,28 +7968,6 @@ static int ufshcd_reset_and_restore(struct ufs_hba *hba)
 		err = ufshcd_host_reset_and_restore(hba);
 	} while (err && --retries);
 
-<<<<<<< HEAD
-	/*
-	 * After reset the door-bell might be cleared, complete
-	 * outstanding requests in s/w here.
-	 */
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	ufshcd_transfer_req_compl(hba, DID_RESET);
-	ufshcd_tmc_handler(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
-
-||||||| c03c45ef975e
-	/*
-	 * After reset the door-bell might be cleared, complete
-	 * outstanding requests in s/w here.
-	 */
-	spin_lock_irqsave(hba->host->host_lock, flags);
-	ufshcd_transfer_req_compl(hba);
-	ufshcd_tmc_handler(hba);
-	spin_unlock_irqrestore(hba->host->host_lock, flags);
-
-=======
->>>>>>> 4dc4199770a362868459b54ca887e5ac6022b309
 	return err;
 }
 

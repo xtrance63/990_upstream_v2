@@ -898,6 +898,7 @@ static int avc_update_node(struct selinux_avc *avc,
 		if (rc) {
 			avc_node_kill(avc, node);
 			goto out_unlock;
+		}
 	}
 
 	switch (event) {
