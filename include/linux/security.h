@@ -1845,6 +1845,7 @@ static inline void free_secdata(void *secdata)
 
 #ifdef CONFIG_PERF_EVENTS
 struct perf_event_attr;
+struct perf_event;
 
 #ifdef CONFIG_SECURITY
 extern int security_perf_event_open(struct perf_event_attr *attr, int type);
