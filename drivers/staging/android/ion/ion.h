@@ -367,4 +367,9 @@ void ion_buffer_kmap_put(struct ion_buffer *buffer);
 
 unsigned int get_ion_system_heap_id(void);
 
+#ifdef CONFIG_ION_MODULE
+int ion_add_cma_heaps(void);
+int ion_system_heap_create(void);
+int ion_system_contig_heap_create(void);
+#endif
 #endif /* _ION_H */
