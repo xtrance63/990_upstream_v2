@@ -190,6 +190,7 @@ enum node_stat_item {
 	ZERO_PAGE_ALLOC_PREZERO,
 #endif
 	NR_INDIRECTLY_RECLAIMABLE_BYTES, /* measured in bytes */
+	NR_KERNEL_MISC_RECLAIMABLE,	/* reclaimable non-slab kernel pages */
 	NR_VM_NODE_STAT_ITEMS
 };
 
