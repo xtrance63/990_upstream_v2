@@ -255,7 +255,7 @@ config BLOCK_SUPPORT_STLOG
 	default y
 
 config BLK_MQ_VIRTIO
-	bool
+	tristate
 	depends on BLOCK && VIRTIO
 	default y
 
