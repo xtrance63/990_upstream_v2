@@ -153,6 +153,7 @@ struct devfreq {
 	struct list_head node;
 
 	struct mutex lock;
+	struct mutex event_lock;
 	struct device dev;
 	struct devfreq_dev_profile *profile;
 	const struct devfreq_governor *governor;
@@ -181,6 +182,7 @@ struct devfreq {
 	struct srcu_notifier_head transition_notifier_list;
 
 	bool disabled_pm_qos;
+	bool dev_suspended;
 };
 
 struct devfreq_freqs {

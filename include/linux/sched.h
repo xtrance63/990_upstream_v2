@@ -761,6 +761,12 @@ struct task_struct {
 	struct sched_rt_entity		rt;
 	struct sched_avg		sa_box;
 
+	/* task boost vendor fields */
+	u64				last_sleep_ts;
+	int				boost;
+	u64				boost_period;
+	u64				boost_expires;
+
 #ifdef CONFIG_SCHED_USE_FLUID_RT
 	int victim_flag;
 #endif
