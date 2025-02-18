@@ -220,13 +220,8 @@ struct vm_area_struct;
 #define __GFP_NOLOCKDEP ((__force gfp_t)___GFP_NOLOCKDEP)
 
 /* Room for N __GFP_FOO bits */
-#define __GFP_BITS_SHIFT (25)
-#ifdef CONFIG_LOCKDEP
+#define __GFP_BITS_SHIFT (24 + IS_ENABLED(CONFIG_LOCKDEP))
 #define __GFP_BITS_MASK ((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1))
-#else
-#define __GFP_BITS_MASK (((__force gfp_t)((1 << __GFP_BITS_SHIFT) - 1)) & \
-				~0x800000u)
-#endif
 
 /* __GFP_NOCMA indicates that CMA allocation must not be allowed */
 #define __GFP_NOCMA	((__force gfp_t)___GFP_NOCMA)

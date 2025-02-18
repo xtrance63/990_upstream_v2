@@ -78,25 +78,6 @@
 static DEFINE_MUTEX(pcp_batch_high_lock);
 #define MIN_PERCPU_PAGELIST_FRACTION	(8)
 
-/* If RANK_BIT position in physical address is zero, it is main rank */
-#define is_main_rank(page)	!rankid(page)
-
-static inline void rank_list_add(struct page *page, struct list_head *list)
-{
-	if (is_main_rank(page))
-		list_add(&(page)->lru, list);
-	else
-		list_add_tail(&(page)->lru, list);
-}
-
-static inline void rank_list_move(struct page *page, struct list_head *list)
-{
-	if (is_main_rank(page))
-		list_move(&(page)->lru, list);
-	else
-		list_move_tail(&(page)->lru, list);
-}
-
 #ifdef CONFIG_USE_PERCPU_NUMA_NODE_ID
 DEFINE_PER_CPU(int, numa_node);
 EXPORT_PER_CPU_SYMBOL(numa_node);
@@ -952,13 +933,13 @@ done_merging:
 		higher_buddy = higher_page + (buddy_pfn - combined_pfn);
 		if (pfn_valid_within(buddy_pfn) &&
 		    page_is_buddy(higher_page, higher_buddy, order + 1)) {
-			rank_list_add(page,
+			list_add_tail(&page->lru,
 				&zone->free_area[order].free_list[migratetype]);
 			goto out;
 		}
 	}
 
-	rank_list_add(page, &zone->free_area[order].free_list[migratetype]);
+	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 out:
 	zone->free_area[order].nr_free++;
 }
@@ -1348,7 +1329,7 @@ static void  __free_pages_ok(struct page *page, unsigned int order)
 }
 
 void ___free_pages_ok(struct page *page, unsigned int order,
-		      bool skip_hugepage_pool)
+	bool skip_hugepage_pool)
 #else
 static void __free_pages_ok(struct page *page, unsigned int order)
 #endif
@@ -1358,12 +1339,13 @@ static void __free_pages_ok(struct page *page, unsigned int order)
 	unsigned long pfn = page_to_pfn(page);
 
 #ifdef CONFIG_HUGEPAGE_POOL
-	if (!skip_hugepage_pool && !free_pages_prepare(page, order, true))
-		return;
+if (!skip_hugepage_pool && !free_pages_prepare(page, order, true))
+	return;
 #else
 	if (!free_pages_prepare(page, order, true))
 		return;
 #endif
+
 
 #ifdef CONFIG_HUGEPAGE_POOL
 	if (!skip_hugepage_pool && order == HUGEPAGE_ORDER &&
@@ -1931,7 +1913,7 @@ static inline void expand(struct zone *zone, struct page *page,
 		if (set_page_guard(zone, &page[size], high, migratetype))
 			continue;
 
-		rank_list_add(&page[size], &area->free_list[migratetype]);
+		list_add(&page[size].lru, &area->free_list[migratetype]);
 		area->nr_free++;
 		set_page_order(&page[size], high);
 	}
@@ -2061,38 +2043,6 @@ static void prep_new_page(struct page *page, unsigned int order, gfp_t gfp_flags
 }
 
 /*
- * Search the free lists from requested order to MAX_ORDER to find
- * the main rank page and returns the order if exists.
- * If main rank page doesn't exist, returns the smallest order of
- * available backup rank page.
- *
- * MAX_ORDER is returned if there's no available pages.
- */
-static __always_inline
-unsigned int __get_min_rank_aware_order(struct zone *zone,
-					unsigned int order, int migratetype)
-{
-	unsigned int current_order, backup_order = MAX_ORDER;
-	struct free_area *area;
-	struct page *page;
-
-	/* Find a page of the appropriate size in the preferred list */
-	for (current_order = order; current_order < MAX_ORDER; ++current_order) {
-		area = &(zone->free_area[current_order]);
-		page = list_first_entry_or_null(&area->free_list[migratetype],
-						struct page, lru);
-		if (page) {
-			if (is_main_rank(page))
-				return current_order;
-			if (backup_order == MAX_ORDER)
-				backup_order = current_order;
-		}
-	}
-
-	return backup_order;
-}
-
-/*
  * Go through the free lists for the given migratetype and remove
  * the smallest available page from the freelists
  */
@@ -2104,20 +2054,22 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 	struct free_area *area;
 	struct page *page;
 
-	current_order = __get_min_rank_aware_order(zone, order, migratetype);
-	if (current_order == MAX_ORDER)
-		return NULL;
+	/* Find a page of the appropriate size in the preferred list */
+	for (current_order = order; current_order < MAX_ORDER; ++current_order) {
+		area = &(zone->free_area[current_order]);
+		page = list_first_entry_or_null(&area->free_list[migratetype],
+							struct page, lru);
+		if (!page)
+			continue;
+		list_del(&page->lru);
+		rmv_page_order(page);
+		area->nr_free--;
+		expand(zone, page, order, current_order, area, migratetype);
+		set_pcppage_migratetype(page, migratetype);
+		return page;
+	}
 
-	area = &(zone->free_area[current_order]);
-	page = list_first_entry_or_null(&area->free_list[migratetype],
-			struct page, lru);
-	list_del(&page->lru);
-	rmv_page_order(page);
-	area->nr_free--;
-	expand(zone, page, order, current_order, area, migratetype);
-	set_pcppage_migratetype(page, migratetype);
-
-	return page;
+	return NULL;
 }
 
 
@@ -2201,7 +2153,7 @@ static int move_freepages(struct zone *zone,
 		}
 
 		order = page_order(page);
-		rank_list_move(page,
+		list_move(&page->lru,
 			  &zone->free_area[order].free_list[migratetype]);
 		page += 1 << order;
 		pages_moved += 1 << order;
@@ -2375,7 +2327,7 @@ static void steal_suitable_fallback(struct zone *zone, struct page *page,
 
 single_page:
 	area = &zone->free_area[current_order];
-	rank_list_move(page, &area->free_list[start_type]);
+	list_move(&page->lru, &area->free_list[start_type]);
 }
 
 /*
@@ -2643,34 +2595,37 @@ __rmqueue(struct zone *zone, unsigned int order, int migratetype,
 {
 	struct page *page = NULL;
 
+#ifdef CONFIG_CMA
+	if (migratetype == MIGRATE_CMA) {
+#else
+	if (migratetype == MIGRATE_MOVABLE) {
+#endif
+		page = __rmqueue_cma_fallback(zone, order);
+		if(page)
+			return page; // if not returned then results in memleak
+		// revisit
+		migratetype = MIGRATE_MOVABLE;
+	}
+
 retry:
 	page = __rmqueue_smallest(zone, order, migratetype);
+	if (unlikely(!page)) {
+		if (migratetype == MIGRATE_MOVABLE)
+			page = __rmqueue_cma_fallback(zone, order);
 
-	if (unlikely(!page) && __rmqueue_fallback(zone, order, migratetype,
-						  alloc_flags))
-		goto retry;
+		if (!page && __rmqueue_fallback(zone, order, migratetype,
+						alloc_flags))
+			goto retry;
+	}
 
 	trace_mm_page_alloc_zone_locked(page, order, migratetype);
 	return page;
 }
 
-#ifdef CONFIG_CMA
-static struct page *__rmqueue_cma(struct zone *zone, unsigned int order)
-{
-	struct page *page = 0;
-
-	if (IS_ENABLED(CONFIG_CMA))
-		if (!zone->cma_alloc)
-			page = __rmqueue_cma_fallback(zone, order);
-	trace_mm_page_alloc_zone_locked(page, order, MIGRATE_CMA);
-	return page;
-}
-#else
 static inline struct page *__rmqueue_cma(struct zone *zone, unsigned int order)
 {
 	return NULL;
 }
-#endif
 
 /*
  * Obtain a specified number of elements from the buddy allocator, all under
@@ -2685,18 +2640,8 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
-		struct page *page;
-
-		/*
-		 * If migrate type CMA is being requested only try to
-		 * satisfy the request with CMA pages to try and increase
-		 * CMA utlization.
-		 */
-		if (is_migrate_cma(migratetype))
-			page = __rmqueue_cma(zone, order);
-		else
-			page = __rmqueue(zone, order, migratetype, alloc_flags);
-
+		struct page *page = __rmqueue(zone, order, migratetype,
+								alloc_flags);
 		if (unlikely(page == NULL))
 			break;
 
@@ -2713,7 +2658,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 		 * for IO devices that can merge IO requests if the physical
 		 * pages are ordered properly.
 		 */
-		rank_list_add(page, list);
+		list_add_tail(&page->lru, list);
 		alloced++;
 		if (is_migrate_cma(get_pcppage_migratetype(page)))
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
@@ -2736,6 +2681,7 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
  * empty.
  * If the list is empty return NULL.
  */
+/*
 static struct list_head *get_populated_pcp_list(struct zone *zone,
 			unsigned int order, struct per_cpu_pages *pcp,
 			int migratetype, unsigned int alloc_flags)
@@ -2752,6 +2698,7 @@ static struct list_head *get_populated_pcp_list(struct zone *zone,
 	}
 	return list;
 }
+*/
 
 #ifdef CONFIG_NUMA
 /*
@@ -3013,7 +2960,7 @@ static void free_unref_page_commit(struct page *page, unsigned long pfn)
 	}
 
 	pcp = &this_cpu_ptr(zone->pageset)->pcp;
-	rank_list_add(page, &pcp->lists[migratetype]);
+	list_add(&page->lru, &pcp->lists[migratetype]);
 	pcp->count++;
 	if (pcp->count >= pcp->high) {
 		unsigned long batch = READ_ONCE(pcp->batch);
@@ -3176,28 +3123,16 @@ static inline void zone_statistics(struct zone *preferred_zone, struct zone *z)
 static struct page *__rmqueue_pcplist(struct zone *zone, int migratetype,
 			unsigned int alloc_flags,
 			struct per_cpu_pages *pcp,
-			gfp_t gfp_flags)
+			struct list_head *list)
 {
 	struct page *page = NULL;
-	struct list_head *list = NULL;
 
 	do {
-		/* First try to get CMA pages */
-		if (migratetype == MIGRATE_MOVABLE &&
-				gfp_flags & __GFP_CMA) {
-			list = get_populated_pcp_list(zone, 0, pcp,
-					get_cma_migrate_type(), alloc_flags);
-		}
-
-		if (list == NULL) {
-			/*
-			 * Either CMA is not suitable or there are no
-			 * free CMA pages.
-			 */
-			list = get_populated_pcp_list(zone, 0, pcp,
+		if (list_empty(list)) {
+			pcp->count += rmqueue_bulk(zone, 0,
+					pcp->batch, list,
 					migratetype, alloc_flags);
-			if (unlikely(list == NULL) ||
-					unlikely(list_empty(list)))
+			if (unlikely(list_empty(list)))
 				return NULL;
 		}
 
@@ -3233,16 +3168,18 @@ static struct page *__rmqueue_pcplist(struct zone *zone, int migratetype,
 static struct page *rmqueue_pcplist(struct zone *preferred_zone,
 			struct zone *zone, unsigned int order,
 			gfp_t gfp_flags, int migratetype,
+			int migratetype_rmqueue,
 			unsigned int alloc_flags)
 {
 	struct per_cpu_pages *pcp;
 	struct page *page;
 	unsigned long flags;
+	struct list_head *list;
 
 	local_irq_save(flags);
 	pcp = &this_cpu_ptr(zone->pageset)->pcp;
-	page = __rmqueue_pcplist(zone,  migratetype, alloc_flags, pcp,
-				 gfp_flags);
+	list = &pcp->lists[migratetype];
+	page = __rmqueue_pcplist(zone,  migratetype_rmqueue, alloc_flags, pcp, list);
 	if (page) {
 		__count_zid_vm_events(PGALLOC, page_zonenum(page), 1 << order);
 		zone_statistics(preferred_zone, zone);
@@ -3250,24 +3187,6 @@ static struct page *rmqueue_pcplist(struct zone *preferred_zone,
 	local_irq_restore(flags);
 	return page;
 }
-
-#ifdef CONFIG_CMA
-static inline bool gfp_cma_alloc_allowed(gfp_t gfp_mask)
-{
-	if ((gfpflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE) &&
-#ifdef CONFIG_KZEROD
-		((gfp_mask & (GFP_HIGHUSER_MOVABLE & ~__GFP_DIRECT_RECLAIM))
-		  == (GFP_HIGHUSER_MOVABLE & ~__GFP_DIRECT_RECLAIM)) &&
-#else
-		((gfp_mask & GFP_HIGHUSER_MOVABLE) == GFP_HIGHUSER_MOVABLE) &&
-#endif
-		!(gfp_mask & __GFP_NOCMA))
-		return true;
-	return false;
-}
-#else
-static inline bool gfp_cma_alloc_allowed(gfp_t gfp_mask) { return false; }
-#endif
 
 /*
  * Allocate a page from the given zone. Use pcplists for order-0 allocations.
@@ -3280,20 +3199,30 @@ struct page *rmqueue(struct zone *preferred_zone,
 {
 	unsigned long flags;
 	struct page *page;
-	int migratetype_rmqueue;
-
-	if ((zone_idx(zone) == ZONE_NORMAL) && (gfp_flags & __GFP_NOCMA))
-		migratetype = MIGRATE_UNMOVABLE;
-
-	migratetype_rmqueue = migratetype;
+	int migratetype_rmqueue = migratetype;
 
 #ifdef CONFIG_CMA
-	if (gfp_cma_alloc_allowed(gfp_flags))
+	if ((migratetype_rmqueue == MIGRATE_MOVABLE) &&
+	    ((gfp_flags & GFP_HIGHUSER_MOVABLE) == GFP_HIGHUSER_MOVABLE))
 		migratetype_rmqueue = MIGRATE_CMA;
 #endif
 	if (likely(order == 0)) {
 		page = rmqueue_pcplist(preferred_zone, zone, order,
-				gfp_flags, migratetype, alloc_flags);
+				gfp_flags, migratetype, migratetype_rmqueue, alloc_flags);
+		/*
+		if(page == NULL) {
+			 dump_stack();
+			 printk(KERN_CRIT "%s gfp_flags 0x%x alloc_flags 0x%xmigratetype 0x%x migratetype_rmqueue 0x%x\n",__func__,gfp_flags, alloc_flags, migratetype, migratetype_rmqueue);
+		}
+		*/
+		/*
+		 * Allocation with GFP_MOVABLE and !GFP_HIGHMEM will have
+		 * another chance of page allocation from the free list.
+		 * See the comment in __rmqueue_pcplist().
+		 */
+#ifdef CONFIG_CMA
+		if (likely(page) || (migratetype_rmqueue != MIGRATE_MOVABLE))
+#endif
 		goto out;
 	}
 
@@ -3312,13 +3241,8 @@ struct page *rmqueue(struct zone *preferred_zone,
 			if (page)
 				trace_mm_page_alloc_zone_locked(page, order, migratetype);
 		}
-
-		if (!page && migratetype == MIGRATE_MOVABLE &&
-				gfp_flags & __GFP_CMA)
-			page = __rmqueue_cma(zone, order);
-
 		if (!page)
-			page = __rmqueue(zone, order, migratetype, alloc_flags);
+			page = __rmqueue(zone, order, migratetype_rmqueue, alloc_flags);
 	} while (page && check_new_pages(page, order));
 
 	spin_unlock(&zone->lock);
@@ -3759,6 +3683,7 @@ try_this_zone:
 	return NULL;
 }
 
+
 /*
  * Large machines with many possible nodes should not always dump per-node
  * meminfo in irq context.
@@ -3776,6 +3701,7 @@ static inline bool should_suppress_show_mem(void)
 static void warn_alloc_show_mem(gfp_t gfp_mask, nodemask_t *nodemask)
 {
 	unsigned int filter = SHOW_MEM_FILTER_NODES;
+
 	static DEFINE_RATELIMIT_STATE(show_mem_rs, HZ, 1);
 
 	if (should_suppress_show_mem() || !__ratelimit(&show_mem_rs))
@@ -3800,8 +3726,9 @@ void warn_alloc(gfp_t gfp_mask, nodemask_t *nodemask, const char *fmt, ...)
 {
 	struct va_format vaf;
 	va_list args;
+
 	static DEFINE_RATELIMIT_STATE(nopage_rs, DEFAULT_RATELIMIT_INTERVAL,
-				      DEFAULT_RATELIMIT_BURST);
+		DEFAULT_RATELIMIT_BURST);
 
 	if ((gfp_mask & __GFP_NOWARN) || !__ratelimit(&nopage_rs))
 		return;
@@ -4262,9 +4189,10 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 		alloc_flags |= ALLOC_KSWAPD;
 
 #ifdef CONFIG_CMA
-	if (gfpflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+	if ((gfpflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE) ||
+		((gfp_mask & GFP_HIGHUSER_MOVABLE) == GFP_HIGHUSER_MOVABLE))
 		alloc_flags |= ALLOC_CMA;
-
+#endif
 	return alloc_flags;
 }
 
@@ -4751,7 +4679,7 @@ static inline bool prepare_alloc_pages(gfp_t gfp_mask, unsigned int order,
 	if (should_fail_alloc_page(gfp_mask, order))
 		return false;
 
-	if (gfp_cma_alloc_allowed(gfp_mask))
+	if (IS_ENABLED(CONFIG_CMA) && ac->migratetype == MIGRATE_MOVABLE)
 		*alloc_flags |= ALLOC_CMA;
 
 	return true;
@@ -8386,7 +8314,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 	if (ret)
 		return ret;
 
-	cc.zone->cma_alloc = 1;
 	/*
 	 * In case of -EBUSY, we'd like to know which page causes problem.
 	 * So, just fall through. test_pages_isolated() has a tracepoint
@@ -8469,7 +8396,6 @@ int alloc_contig_range(unsigned long start, unsigned long end,
 done:
 	undo_isolate_page_range(pfn_max_align_down(start),
 				pfn_max_align_up(end), migratetype);
-	cc.zone->cma_alloc = 0;
 	return ret;
 }
 
