@@ -248,6 +248,7 @@ TRACE_EVENT(frt_load_rt_se,
 /*
  * Tracepoint for accounting load averages for rq of rt
  */
+#ifdef CONFIG_RT_GROUP_SCHED
 TRACE_EVENT(frt_load_rt_rq,
 
 	TP_PROTO(struct rt_rq *rt_rq),
@@ -270,6 +271,7 @@ TRACE_EVENT(frt_load_rt_rq,
 	TP_printk("cpu=%d load=%lu util=%lu",
 		  __entry->cpu, __entry->load, __entry->util)
 );
+#endif
 
 /*
  * Tracepoint for accounting multi load for tasks

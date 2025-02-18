@@ -67,6 +67,7 @@ bool frt_initialized;
 	WRITE_ONCE(*ptr, res);					\
 } while (0)
 
+#ifdef CONFIG_RT_GROUP_SCHED
 #define rt_entity_is_task(rt_se) (!(rt_se)->my_q)
 
 /*
@@ -100,6 +101,36 @@ static inline struct rq *rq_of_rt_se(struct sched_rt_entity *rt_se)
 
 	return rt_rq->rq;
 }
+
+#else
+
+#define rt_entity_is_task(rt_se) (1)
+
+static inline struct task_struct *rt_task_of(struct sched_rt_entity *rt_se)
+{
+        return container_of(rt_se, struct task_struct, rt);
+}
+
+static inline struct rq *rq_of_rt_rq(struct rt_rq *rt_rq)
+{
+        return container_of(rt_rq, struct rq, rt);
+}
+
+static inline struct rq *rq_of_rt_se(struct sched_rt_entity *rt_se)
+{
+        struct task_struct *p = rt_task_of(rt_se);
+
+        return task_rq(p);
+}
+
+static inline struct rt_rq *rt_rq_of_se(struct sched_rt_entity *rt_se)
+{
+        struct rq *rq = rq_of_rt_se(rt_se);
+
+        return &rq->rt;
+}
+
+#endif
 
 static struct kobject *frt_kobj;
 struct frt_attr {
@@ -459,7 +490,9 @@ static inline int propagate_rt_entity_load_avg(struct sched_rt_entity *se)
 
 	update_tg_rt_util(rt_rq, se, grt_rq);
 
+#ifdef CONFIG_RT_GROUP_SCHED
 	trace_frt_load_rt_rq(rt_rq);
+#endif
 	trace_frt_load_rt_se(se);
 
 	return 1;
@@ -503,8 +536,14 @@ void frt_init_entity_runnable_average(struct sched_rt_entity *rt_se)
 
 static void rt_rq_util_change(struct rt_rq *rt_rq)
 {
-	if (&this_rq()->rt == rt_rq)
+	if (&this_rq()->rt == rt_rq) {
+#ifdef CONFIG_RT_GROUP_SCHED
 		cpufreq_update_util(rt_rq->rq, 0);
+#else
+		struct rq *rq = rq_of_rt_rq(rt_rq);
+		cpufreq_update_util(rq, 0);
+#endif
+	}
 }
 
 static __always_inline u32
@@ -608,7 +647,9 @@ static int __update_load_avg_rt_rq(u64 now, int cpu, struct rt_rq *rt_rq)
 
 		___update_load_avg(&rt_rq->avg);
 
+#ifdef CONFIG_RT_GROUP_SCHED
 		trace_frt_load_rt_rq(rt_rq);
+#endif
 
 		return 1;
 	}
@@ -704,7 +745,9 @@ static void attach_rt_entity_load_avg(struct rt_rq *rt_rq,
 	rt_rq->avg.util_avg += se->avg.util_avg;
 	rt_rq->avg.util_sum += se->avg.util_sum;
 
+#ifdef CONFIG_RT_GROUP_SCHED
 	trace_frt_load_rt_rq(rt_rq);
+#endif
 
 	rt_rq_util_change(rt_rq);
 }
@@ -724,7 +767,9 @@ static void detach_rt_entity_load_avg(struct rt_rq *rt_rq, struct sched_rt_entit
 
 	rt_rq_util_change(rt_rq);
 
+#ifdef CONFIG_RT_GROUP_SCHED
 	trace_frt_load_rt_rq(rt_rq);
+#endif
 }
 
 void frt_update_load_avg(struct rt_rq *rt_rq, struct sched_rt_entity *se, int flags)
