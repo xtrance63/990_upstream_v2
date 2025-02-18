@@ -193,6 +193,7 @@ enum node_stat_item {
 #endif
 	NR_INDIRECTLY_RECLAIMABLE_BYTES, /* measured in bytes */
 	NR_KERNEL_MISC_RECLAIMABLE,	/* reclaimable non-slab kernel pages */
+	NR_UNRECLAIMABLE_PAGES,
 	NR_VM_NODE_STAT_ITEMS
 };
 

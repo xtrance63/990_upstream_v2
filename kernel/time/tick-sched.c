@@ -1083,11 +1083,6 @@ unsigned long tick_nohz_get_idle_calls_cpu(int cpu)
 	return ts->idle_calls;
 }
 
-ktime_t *get_next_event_cpu(unsigned int cpu)
-{
-	return &(per_cpu(tick_cpu_device, cpu).evtdev->next_event);
-}
-
 /**
  * tick_nohz_get_idle_calls - return the current idle calls counter value
  *
@@ -1401,6 +1396,12 @@ int tick_check_oneshot_change(int allow_nohz)
 	tick_nohz_switch_to_nohz();
 	return 0;
 }
+
+ktime_t *get_next_event_cpu(unsigned int cpu)
+{
+	return &(per_cpu(tick_cpu_device, cpu).evtdev->next_event);
+}
+EXPORT_SYMBOL_GPL(get_next_event_cpu);
 
 struct tick_sched saved_pcpu_ts[NR_CPUS];
 
