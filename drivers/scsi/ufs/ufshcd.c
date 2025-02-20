@@ -2757,6 +2757,8 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 	int sg_segments;
 	int i;
 	u32 offset;
+	void *bounce_buffer_addr;
+	void *dma_phy_addr;
 
 #if defined(CONFIG_UFS_DATA_LOG)
 	unsigned int dump_index;
@@ -2834,6 +2836,17 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 
 		offset = ((lrbp->task_tag) % 8) * TAG_MAX_SIZE;
 
+		lrbp->mem_check = 0;
+		lrbp->bu_sg_len = 0;
+
+		for (i = 0; i < sg_segments; i++) {
+			if (scsi_sglist(cmd)[i].dma_address >= DMA_UPPER_ADDR) {
+				lrbp->mem_check = 1;
+				i = 0;
+				break;
+			}
+		}
+
 		scsi_for_each_sg(cmd, sg, sg_segments, i) {
 			prd_table[i].size  =
 				cpu_to_le32(((u32) sg_dma_len(sg))-1);
@@ -2842,6 +2855,101 @@ static int ufshcd_map_sg(struct ufs_hba *hba, struct ufshcd_lrb *lrbp)
 			prd_table[i].upper_addr =
 				cpu_to_le32(upper_32_bits(sg->dma_address));
 			prd_table[i].reserved = 0;
+
+			if (lrbp->mem_check) {
+				lrbp->backup_addr[i] = sg->dma_address;
+				lrbp->backup_size[i] = cpu_to_le32((u32) sg_dma_len(sg));
+				prd_table[i].size  =
+					cpu_to_le32(((u32) sg_dma_len(sg)) - 1);
+
+				if (lrbp->data_trans == DATA_WRITE) {
+					if (lrbp->task_tag < 8) {
+						bounce_buffer_addr =
+							(hba->bounce_buffer_addr) + offset;
+						dma_phy_addr = phys_to_virt(sg->dma_address);
+
+						memcpy(bounce_buffer_addr,
+								dma_phy_addr, lrbp->backup_size[i]);
+
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr + offset)));
+					} else if (lrbp->task_tag > 7 && lrbp->task_tag < 16) {
+						bounce_buffer_addr =
+							(hba->bounce_buffer_addr1) + offset;
+						dma_phy_addr = phys_to_virt(sg->dma_address);
+
+						memcpy(bounce_buffer_addr,
+								dma_phy_addr, lrbp->backup_size[i]);
+
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr1 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr1 + offset)));
+					} else if (lrbp->task_tag > 15 && lrbp->task_tag < 24) {
+						bounce_buffer_addr =
+							(hba->bounce_buffer_addr2) + offset;
+						dma_phy_addr = phys_to_virt(sg->dma_address);
+
+						memcpy(bounce_buffer_addr,
+								dma_phy_addr, lrbp->backup_size[i]);
+
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr2 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr2 + offset)));
+					} else if (lrbp->task_tag > 23 && lrbp->task_tag < 32) {
+						bounce_buffer_addr = (hba->bounce_buffer_addr3) + offset;
+						dma_phy_addr = phys_to_virt(sg->dma_address);
+
+						memcpy(bounce_buffer_addr,
+								dma_phy_addr, lrbp->backup_size[i]);
+
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr3 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr3 + offset)));
+					}
+
+					offset += lrbp->backup_size[i];
+				} else if (lrbp->data_trans == DATA_READ) {
+					if (lrbp->task_tag < 8) {
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr + offset)));
+					} else if (lrbp->task_tag > 7 && lrbp->task_tag < 16) {
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr1 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr1 + offset)));
+					} else if (lrbp->task_tag > 15 && lrbp->task_tag < 24) {
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr2 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr2 + offset)));
+					} else if (lrbp->task_tag > 23 && lrbp->task_tag < 32) {
+						prd_table[i].base_addr =
+							cpu_to_le32(lower_32_bits(virt_to_phys(hba->bounce_buffer_addr3 + offset)));
+						prd_table[i].upper_addr =
+							cpu_to_le32(upper_32_bits(virt_to_phys(hba->bounce_buffer_addr3 + offset)));
+					}
+					offset += lrbp->backup_size[i];
+				}
+				prd_table[i].reserved = 0;
+				hba->transferred_sector += prd_table[i].size;
+				lrbp->bu_sg_len = i;
+			} else {
+				prd_table[i].size  =
+					cpu_to_le32(((u32) sg_dma_len(sg))-1);
+				prd_table[i].base_addr =
+					cpu_to_le32(lower_32_bits(sg->dma_address));
+				prd_table[i].upper_addr =
+					cpu_to_le32(upper_32_bits(sg->dma_address));
+				prd_table[i].reserved = 0;
+				hba->transferred_sector += prd_table[i].size;
+			}
 		}
 	} else {
 		lrbp->utr_descriptor_ptr->prd_table_length = 0;
@@ -6364,6 +6472,8 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba, int reason,
 	int i;
 	int cpu = raw_smp_processor_id();
 	unsigned int dump_index;
+	u32 offset;
+	void *dma_phy_addr;
 
 #if defined(CONFIG_UFS_DATA_LOG)
 #if defined(CONFIG_UFS_DATA_LOG_MAGIC_CODE)
@@ -6377,6 +6487,40 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba, int reason,
 		lrbp = &hba->lrb[index];
 		cmd = lrbp->cmd;
 		if (cmd) {
+			if (lrbp->mem_check) {
+				if (lrbp->data_trans == DATA_READ) {
+					offset = ((lrbp->task_tag) % 8) * TAG_MAX_SIZE;
+			
+					for (i = 0 ; i < (lrbp->bu_sg_len + 1); i++) {
+						if (lrbp->task_tag < 8) {
+							dma_phy_addr = phys_to_virt(lrbp->backup_addr[i]);
+							memcpy(dma_phy_addr,
+									(hba->bounce_buffer_addr + offset),
+									lrbp->backup_size[i]);
+							offset += lrbp->backup_size[i];
+						} else if (lrbp->task_tag > 7 && lrbp->task_tag < 16) {
+							dma_phy_addr = phys_to_virt(lrbp->backup_addr[i]);
+							memcpy(dma_phy_addr,
+									(hba->bounce_buffer_addr1 + offset),
+									lrbp->backup_size[i]);
+							offset += lrbp->backup_size[i];
+						} else if (lrbp->task_tag > 15 && lrbp->task_tag < 24) {
+							dma_phy_addr = phys_to_virt(lrbp->backup_addr[i]);
+							memcpy(dma_phy_addr,
+									(hba->bounce_buffer_addr2 + offset),
+									lrbp->backup_size[i]);
+							offset += lrbp->backup_size[i];
+						} else if (lrbp->task_tag > 23 && lrbp->task_tag < 32) {
+							dma_phy_addr = phys_to_virt(lrbp->backup_addr[i]);
+							memcpy(dma_phy_addr,
+									(hba->bounce_buffer_addr3 + offset),
+									lrbp->backup_size[i]);
+							offset += lrbp->backup_size[i];
+						}
+					}
+				}
+			}
+
 			ufshcd_add_command_trace(hba, index, "complete");
 			result = ufshcd_transfer_rsp_status(hba, lrbp);
 			
