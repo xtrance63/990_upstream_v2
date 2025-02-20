@@ -108,7 +108,7 @@ static int fmp_ufshcd_map_sg_crypto(struct ufs_hba *hba,
 
 	if (!q->ksm || !bio_crypt_should_process(cmd->request)) {
 		req.table = prd;
-		req.prdt_off = hba->sg_entry_size;
+		req.prdt_off = sizeof(struct ufshcd_sg_entry);
 		req.prdt_cnt = sg_segments;
 		ret = exynos_fmp_bypass(&req, bio);
 		if (ret) {
@@ -145,7 +145,7 @@ encrypt:
 			fmp_crypto_debug(api_lrbp_crypto_err, 1, req.table);
 			return ret;
 		}
-		prd = (void *)prd + hba->sg_entry_size;
+		prd = (void *)prd + sizeof(struct ufshcd_sg_entry);
 		fmp_crypto_debug(api_prepare_lrbp_crypto_loop, 0, NULL);
 	}
 	fmp_crypto_debug(api_prepare_lrbp_crypto, 1, &lrbp->ucd_prdt_ptr[0]);
@@ -187,7 +187,7 @@ static int fmp_ufshcd_complete_lrbp_crypto(struct ufs_hba *hba,
 			pr_warn("%s: fails to clear fips\n", __func__);
 			break;
 		}
-		prd = (void *)prd + hba->sg_entry_size;
+		prd = (void *)prd + sizeof(struct ufshcd_sg_entry);
 	}
 	fmp_crypto_debug(api_complete_lrbp_crypto, 1, &lrbp->ucd_prdt_ptr[0]);
 	return 0;
@@ -226,7 +226,7 @@ void exynos_ufs_fmp_config(struct ufs_hba *hba, bool init)
 {
 	if (init) {
 		fmp_crypto_debug(api_init, 0, NULL);
-		hba->sg_entry_size = sizeof(struct fmp_table_setting);
+		//hba->sg_entry_size = sizeof(struct fmp_table_setting);
 		hba->crypto_vops = &exynos_ufs_fmp_ops;
 	}
 	exynos_fmp_sec_cfg(0, 0, init);
