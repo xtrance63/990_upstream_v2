@@ -1184,8 +1184,10 @@ int xhci_resume(struct xhci_hcd *xhci, bool hibernated)
 		xhci_dbg(xhci, "Stop HCD\n");
 		xhci_halt(xhci);
 		xhci_zero_64b_regs(xhci);
-		xhci_reset(xhci);
+		retval = xhci_reset(xhci);
 		spin_unlock_irq(&xhci->lock);
+		if (retval)
+			return retval;
 		xhci_cleanup_msix(xhci);
 
 		xhci_dbg(xhci, "// Disabling event ring interrupts\n");
@@ -1440,6 +1442,7 @@ static int xhci_check_maxpacket(struct xhci_hcd *xhci, unsigned int slot_id,
 				xhci->devs[slot_id]->out_ctx, ep_index);
 
 		ep_ctx = xhci_get_ep_ctx(xhci, command->in_ctx, ep_index);
+		ep_ctx->ep_info &= cpu_to_le32(~EP_STATE_MASK);/* must clear */
 		ep_ctx->ep_info2 &= cpu_to_le32(~MAX_PACKET_MASK);
 		ep_ctx->ep_info2 |= cpu_to_le32(MAX_PACKET(max_packet_size));
 
@@ -3192,10 +3195,11 @@ static void xhci_endpoint_reset(struct usb_hcd *hcd,
 
 	wait_for_completion(cfg_cmd->completion);
 
-	ep->ep_state &= ~EP_SOFT_CLEAR_TOGGLE;
 	xhci_free_command(xhci, cfg_cmd);
 cleanup:
 	xhci_free_command(xhci, stop_cmd);
+	if (ep->ep_state & EP_SOFT_CLEAR_TOGGLE)
+		ep->ep_state &= ~EP_SOFT_CLEAR_TOGGLE;
 }
 
 static int xhci_check_streams_endpoint(struct xhci_hcd *xhci,
@@ -4437,6 +4441,9 @@ static int xhci_set_usb2_hardware_lpm(struct usb_hcd *hcd,
 	int		hird, exit_latency;
 	int		ret;
 
+	if (xhci->quirks & XHCI_HW_LPM_DISABLE)
+		return -EPERM;
+
 	if (hcd->speed >= HCD_USB3 || !xhci->hw_lpm_support ||
 			!udev->lpm_capable)
 		return -EPERM;
@@ -4459,7 +4466,7 @@ static int xhci_set_usb2_hardware_lpm(struct usb_hcd *hcd,
 	xhci_dbg(xhci, "%s port %d USB2 hardware LPM\n",
 			enable ? "enable" : "disable", port_num + 1);
 
-	if (enable && !(xhci->quirks & XHCI_HW_LPM_DISABLE)) {
+	if (enable) {
 		/* Host supports BESL timeout instead of HIRD */
 		if (udev->usb2_hw_lpm_besl_capable) {
 			/* if device doesn't have a preferred BESL value use a
@@ -4518,6 +4525,9 @@ static int xhci_set_usb2_hardware_lpm(struct usb_hcd *hcd,
 			mutex_lock(hcd->bandwidth_mutex);
 			xhci_change_max_exit_latency(xhci, udev, 0);
 			mutex_unlock(hcd->bandwidth_mutex);
+			readl_poll_timeout(ports[port_num]->addr, pm_val,
+					   (pm_val & PORT_PLS_MASK) == XDEV_U0,
+					   100, 10000);
 			return 0;
 		}
 	}
@@ -5368,6 +5378,79 @@ int xhci_wake_lock(struct usb_hcd *hcd, int is_lock) {
 	return 0;
 }
 
+static phys_addr_t xhci_get_sec_event_ring_phys_addr(struct usb_hcd *hcd,
+	unsigned int intr_num, dma_addr_t *dma)
+{
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct device *dev = hcd->self.sysdev;
+	struct sg_table sgt;
+	phys_addr_t pa;
+
+	if (intr_num > xhci->max_interrupters) {
+		xhci_err(xhci, "intr num %d > max intrs %d\n", intr_num,
+			xhci->max_interrupters);
+		return 0;
+	}
+
+	if (!(xhci->xhc_state & XHCI_STATE_HALTED) &&
+		xhci->sec_event_ring && xhci->sec_event_ring[intr_num]
+		&& xhci->sec_event_ring[intr_num]->first_seg) {
+
+		dma_get_sgtable(dev, &sgt,
+			xhci->sec_event_ring[intr_num]->first_seg->trbs,
+			xhci->sec_event_ring[intr_num]->first_seg->dma,
+			TRB_SEGMENT_SIZE);
+
+		*dma = xhci->sec_event_ring[intr_num]->first_seg->dma;
+
+		pa = page_to_phys(sg_page(sgt.sgl));
+		sg_free_table(&sgt);
+
+		return pa;
+	}
+
+	return 0;
+}
+
+static phys_addr_t xhci_get_xfer_ring_phys_addr(struct usb_hcd *hcd,
+	struct usb_device *udev, struct usb_host_endpoint *ep, dma_addr_t *dma)
+{
+	int ret;
+	unsigned int ep_index;
+	struct xhci_virt_device *virt_dev;
+	struct device *dev = hcd->self.sysdev;
+	struct xhci_hcd *xhci = hcd_to_xhci(hcd);
+	struct sg_table sgt;
+	phys_addr_t pa;
+
+	ret = xhci_check_args(hcd, udev, ep, 1, true, __func__);
+	if (ret <= 0) {
+		xhci_err(xhci, "%s: invalid args\n", __func__);
+		return 0;
+	}
+
+	virt_dev = xhci->devs[udev->slot_id];
+	ep_index = xhci_get_endpoint_index(&ep->desc);
+
+	if (virt_dev->eps[ep_index].ring &&
+		virt_dev->eps[ep_index].ring->first_seg) {
+
+		dma_get_sgtable(dev, &sgt,
+			virt_dev->eps[ep_index].ring->first_seg->trbs,
+			virt_dev->eps[ep_index].ring->first_seg->dma,
+			TRB_SEGMENT_SIZE);
+
+		*dma = virt_dev->eps[ep_index].ring->first_seg->dma;
+
+		pa = page_to_phys(sg_page(sgt.sgl));
+		sg_free_table(&sgt);
+
+		return pa;
+	}
+
+	return 0;
+}
+
 static int  xhci_stop_endpoint(struct usb_hcd *hcd,
 	struct usb_device *udev, struct usb_host_endpoint *ep)
 {
@@ -5490,6 +5573,8 @@ static const struct hc_driver xhci_hc_driver = {
 	.find_raw_port_number =	xhci_find_raw_port_number,
 	.sec_event_ring_setup =		xhci_sec_event_ring_setup,
 	.sec_event_ring_cleanup =	xhci_sec_event_ring_cleanup,
+	.get_sec_event_ring_phys_addr =	xhci_get_sec_event_ring_phys_addr,
+	.get_xfer_ring_phys_addr =	xhci_get_xfer_ring_phys_addr,
 	.stop_endpoint =		xhci_stop_endpoint,
 };
 

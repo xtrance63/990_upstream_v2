@@ -329,6 +329,7 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 	u32 val, mask, bit;
 	unsigned long flags;
 
+
 	gic_lock_irqsave(flags);
 	if (unlikely(d->common->state_use_accessors & IRQD_GIC_MULTI_TARGET)) {
 		struct cpumask temp_mask;

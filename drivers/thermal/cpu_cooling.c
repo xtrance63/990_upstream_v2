@@ -26,11 +26,11 @@
 #include <linux/thermal.h>
 #include <linux/cpufreq.h>
 #include <linux/err.h>
-#include <linux/idr.h>
 #include <linux/pm_opp.h>
 #include <linux/slab.h>
 #include <linux/cpu.h>
 #include <linux/cpu_cooling.h>
+#include <linux/of_device.h>
 #include <linux/debug-snapshot.h>
 
 #include <trace/events/thermal.h>
@@ -691,7 +691,7 @@ static int cpufreq_power2state(struct thermal_cooling_device *cdev,
 	cpu = cpumask_first(policy->related_cpus);
 
 	/* None of our cpus are online */
-	if (cpu >= nr_cpu_ids)
+	if (cpu >= nr_cpu_ids || num_cpus == 0)
 		return -ENODEV;
 
 	cur_freq = cpufreq_quick_get(policy->cpu);

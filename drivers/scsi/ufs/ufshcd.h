@@ -67,6 +67,7 @@
 #include <scsi/scsi_dbg.h>
 #include <scsi/scsi_eh.h>
 #include <scsi/scsi_ioctl.h>
+#include <linux/android_kabi.h>
 
 #define CUSTOMIZE_UPIU_FLAGS
 
@@ -414,6 +415,11 @@ struct ufs_hba_variant_ops {
 		const union ufs_crypto_cfg_entry *cfg, int slot);
 	int	(*access_control_abort)(struct ufs_hba *hba);
 	void	(*perf_mode)(struct ufs_hba *, struct scsi_cmnd *);
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
+	ANDROID_KABI_RESERVE(3);
+	ANDROID_KABI_RESERVE(4);
 };
 
 struct keyslot_mgmt_ll_ops;
@@ -437,6 +443,11 @@ struct ufs_hba_crypto_variant_ops {
 				    struct scsi_cmnd *cmd,
 				    struct ufshcd_lrb *lrbp);
 	void *priv;
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
+	ANDROID_KABI_RESERVE(3);
+	ANDROID_KABI_RESERVE(4);
 };
 
 /* clock gating state  */
@@ -1046,6 +1057,11 @@ struct ufs_hba {
 #if defined(CONFIG_UFSFEATURE)
 	struct ufsf_feature ufsf;
 #endif
+
+	ANDROID_KABI_RESERVE(1);
+	ANDROID_KABI_RESERVE(2);
+	ANDROID_KABI_RESERVE(3);
+	ANDROID_KABI_RESERVE(4);
 };
 
 /* Returns true if clocks can be gated. Otherwise false */

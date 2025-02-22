@@ -21,8 +21,6 @@ int schedtune_prefer_idle(struct task_struct *tsk);
 void schedtune_enqueue_task(struct task_struct *p, int cpu);
 void schedtune_dequeue_task(struct task_struct *p, int cpu);
 
-unsigned long stune_util(int cpu, unsigned long other_util);
-
 bool schedtune_cpu_boost_group_active(int idx, int cpu, u64 now);
 
 #else /* CONFIG_SCHED_TUNE */

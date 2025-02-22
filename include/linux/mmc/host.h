@@ -382,7 +382,7 @@ struct mmc_host {
 #define MMC_CAP2_AVOID_3_3V	(1 << 25)	/* Host must negotiate down from 3.3V */
 #define MMC_CAP2_DETECT_ON_ERR	(1 << 26)	/* On I/O err check card removal */
 #define MMC_CAP2_SKIP_INIT_SCAN		(1 << 27)		/* skip init mmc scan */
-
+#define MMC_CAP2_CRYPTO		(1 << 28)	/* Host supports inline encryption */
 
 	int			fixed_drv_type;	/* fixed driver type for non-removable media */
 
@@ -481,6 +481,9 @@ struct mmc_host {
 	int			cqe_qdepth;
 	bool			cqe_enabled;
 	bool			cqe_on;
+#ifdef CONFIG_MMC_CRYPTO
+	struct keyslot_manager	*ksm;
+#endif /* CONFIG_MMC_CRYPTO */
 
 	int (*sdcard_uevent)(struct mmc_card *card);
 	unsigned long		private[0] ____cacheline_aligned;

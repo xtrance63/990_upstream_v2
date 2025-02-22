@@ -372,6 +372,21 @@ struct dma_buf_ops {
 	void (*vunmap)(struct dma_buf *, void *vaddr);
 
 	/**
+	 * @get_uuid
+	 *
+	 * This is called by dma_buf_get_uuid to get the UUID which identifies
+	 * the buffer to virtio devices.
+	 *
+	 * This callback is optional.
+	 *
+	 * Returns:
+	 *
+	 * 0 on success or a negative error code on failure. On success uuid
+	 * will be populated with the buffer's UUID.
+	 */
+	int (*get_uuid)(struct dma_buf *dmabuf, uuid_t *uuid);
+
+	/**
 	 * @get_flags:
 	 *
 	 * This is called by dma_buf_get_flags and is used to get the buffer's
@@ -456,6 +471,7 @@ struct dma_buf {
 	} cb_excl, cb_shared;
 	dma_buf_destructor dtor;
 	void *dtor_data;
+	atomic_t dent_count;
 };
 
 /**
@@ -573,6 +589,7 @@ void *dma_buf_vmap(struct dma_buf *);
 void dma_buf_vunmap(struct dma_buf *, void *vaddr);
 
 int dma_buf_get_flags(struct dma_buf *dmabuf, unsigned long *flags);
+int dma_buf_get_uuid(struct dma_buf *dmabuf, uuid_t *uuid);
 
 /**
  * dma_buf_set_destructor - set the dma-buf's destructor
