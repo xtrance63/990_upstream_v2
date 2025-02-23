@@ -467,6 +467,7 @@ out:
 	return ret;
 }
 
+int list_clear = 0;
 static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 {
 	struct usb_otg	*otg = fsm->otg;
@@ -507,6 +508,8 @@ static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 		}
 
 		dwc3_otg_set_host_mode(dotg);
+		if (list_clear == 1)
+			INIT_LIST_HEAD(&dwc->xhci->dev.links.needs_suppliers);
 		ret = platform_device_add(dwc->xhci);
 		if (ret) {
 			dev_err(dev, "%s: cannot add xhci\n", __func__);
@@ -538,7 +541,7 @@ static int dwc3_otg_start_host(struct otg_fsm *fsm, int on)
 		}
 
 		platform_device_del(dwc->xhci);
-
+		list_clear = 1;
 err2:
 		ret = dwc3_otg_phy_enable(fsm, 0, on);
 	}
