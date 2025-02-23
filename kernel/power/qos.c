@@ -780,11 +780,25 @@ static const struct file_operations pm_qos_debug_fops = {
 	.release        = single_release,
 };
 
-static inline void pm_qos_set_value_for_cpus(struct pm_qos_constraints *c)
+static inline void pm_qos_set_value_for_cpus(struct pm_qos_constraints *c,
+					     bool dev_req)
 {
 	struct pm_qos_request *req = NULL;
 	int cpu;
 	s32 qos_val[NR_CPUS] = { [0 ... (NR_CPUS - 1)] = c->default_value };
+
+	/*
+	 * pm_qos_set_value_for_cpus expects all c->list elements to be of type
+	 * pm_qos_request, however requests from device will contain elements
+	 * of type dev_pm_qos_request.
+	 * pm_qos_constraints.target_per_cpu can be accessed only for
+	 * constraints associated with one of the pm_qos_class and present in
+	 * pm_qos_array. Device requests are not associated with any of
+	 * pm_qos_class, therefore their target_per_cpu cannot be accessed. We
+	 * can safely skip updating target_per_cpu for device requests.
+	 */
+	if (dev_req)
+		return;
 
 	plist_for_each_entry(req, &c->list, node) {
 		for_each_cpu(cpu, &req->cpus_affine) {
@@ -819,7 +833,7 @@ static inline void pm_qos_set_value_for_cpus(struct pm_qos_constraints *c)
  *  otherwise.
  */
 int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
-			 enum pm_qos_req_action action, int value)
+			 enum pm_qos_req_action action, int value, bool dev_req)
 {
 	struct pm_qos_request *req;
 	unsigned long flags;
@@ -857,7 +871,7 @@ int pm_qos_update_target(struct pm_qos_constraints *c, struct plist_node *node,
 
 	curr_value = pm_qos_get_value(c);
 	pm_qos_set_value(c, curr_value);
-	pm_qos_set_value_for_cpus(c);
+	pm_qos_set_value_for_cpus(c, dev_req);
 
 	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
@@ -1041,7 +1055,7 @@ static void __pm_qos_update_request(struct pm_qos_request *req,
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value, false);
 }
 
 /**
@@ -1075,7 +1089,7 @@ static void pm_qos_irq_release(struct kref *ref)
 	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
 	pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ,
-			c->default_value);
+			c->default_value, false);
 }
 
 static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
@@ -1091,7 +1105,8 @@ static void pm_qos_irq_notify(struct irq_affinity_notify *notify,
 	cpumask_copy(&req->cpus_affine, mask);
 	spin_unlock_irqrestore(&pm_qos_lock, flags);
 
-	pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ, req->node.prio);
+	pm_qos_update_target(c, &req->node, PM_QOS_UPDATE_REQ, req->node.prio,
+			false);
 }
 #endif
 
@@ -1167,7 +1182,7 @@ void pm_qos_add_request_trace(char *func, unsigned int line,
 	INIT_DELAYED_WORK(&req->work, pm_qos_work_fn);
 	trace_pm_qos_add_request(pm_qos_class, value);
 	pm_qos_update_target(pm_qos_array[pm_qos_class]->constraints,
-			     &req->node, PM_QOS_ADD_REQ, value);
+			     &req->node, PM_QOS_ADD_REQ, value, false);
 
 #ifdef CONFIG_SMP
 	if (req->type == PM_QOS_REQ_AFFINE_IRQ &&
@@ -1182,7 +1197,7 @@ void pm_qos_add_request_trace(char *func, unsigned int line,
 			cpumask_setall(&req->cpus_affine);
 			pm_qos_update_target(
 				pm_qos_array[pm_qos_class]->constraints,
-				&req->node, PM_QOS_UPDATE_REQ, value);
+				&req->node, PM_QOS_UPDATE_REQ, value, false);
 		}
 	}
 #endif
@@ -1242,7 +1257,7 @@ void pm_qos_update_request_timeout(struct pm_qos_request *req, s32 new_value,
 	if (new_value != req->node.prio)
 		pm_qos_update_target(
 			pm_qos_array[req->pm_qos_class]->constraints,
-			&req->node, PM_QOS_UPDATE_REQ, new_value);
+			&req->node, PM_QOS_UPDATE_REQ, new_value, false);
 
 	schedule_delayed_work(&req->work, usecs_to_jiffies(timeout_us));
 }
@@ -1273,7 +1288,7 @@ void pm_qos_remove_request(struct pm_qos_request *req)
 	trace_pm_qos_remove_request(req->pm_qos_class, PM_QOS_DEFAULT_VALUE);
 	pm_qos_update_target(pm_qos_array[req->pm_qos_class]->constraints,
 			     &req->node, PM_QOS_REMOVE_REQ,
-			     PM_QOS_DEFAULT_VALUE);
+			     PM_QOS_DEFAULT_VALUE, false);
 	memset(req, 0, sizeof(*req));
 }
 EXPORT_SYMBOL_GPL(pm_qos_remove_request);
