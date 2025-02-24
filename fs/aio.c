@@ -1609,6 +1609,15 @@ static int aio_fsync(struct fsync_iocb *req, const struct iocb *iocb,
 	return 0;
 }
 
+
+static void aio_poll_put_work(struct work_struct *work)
+{
+	struct poll_iocb *req = container_of(work, struct poll_iocb, work);
+	struct aio_kiocb *iocb = container_of(req, struct aio_kiocb, poll);
+
+	iocb_put(iocb);
+}
+
 /*
  * Safely lock the waitqueue which the request is on, synchronizing with the
  * case where the ->poll() provider decides to free its waitqueue early.
@@ -1652,14 +1661,6 @@ static void poll_iocb_unlock_wq(struct poll_iocb *req)
 {
 	spin_unlock(&req->head->lock);
 	rcu_read_unlock();
-}
-
-static void aio_poll_put_work(struct work_struct *work)
-{
-	struct poll_iocb *req = container_of(work, struct poll_iocb, work);
-	struct aio_kiocb *iocb = container_of(req, struct aio_kiocb, poll);
-
-	iocb_put(iocb);
 }
 
 static void aio_poll_complete_work(struct work_struct *work)
@@ -1741,25 +1742,19 @@ static int aio_poll_wake(struct wait_queue_entry *wait, unsigned mode, int sync,
 	 * Complete the request inline if possible.  This requires that three
 	 * conditions be met:
 	 *   1. An event mask must have been passed.  If a plain wakeup was done
-	 *      instead, then mask == 0 and we have to call vfs_poll() to get
-	 *      the events, so inline completion isn't possible.
+	 *	instead, then mask == 0 and we have to call vfs_poll() to get
+	 *	the events, so inline completion isn't possible.
 	 *   2. The completion work must not have already been scheduled.
 	 *   3. ctx_lock must not be busy.  We have to use trylock because we
-	 *      already hold the waitqueue lock, so this inverts the normal
-	 *      locking order.  Use irqsave/irqrestore because not all
-	 *      filesystems (e.g. fuse) call this function with IRQs disabled,
-	 *      yet IRQs have to be disabled before ctx_lock is obtained.
+	 *	already hold the waitqueue lock, so this inverts the normal
+	 *	locking order.  Use irqsave/irqrestore because not all
+	 *	filesystems (e.g. fuse) call this function with IRQs disabled,
+	 *	yet IRQs have to be disabled before ctx_lock is obtained.
 	 */
 	if (mask && !req->work_scheduled &&
-		spin_trylock_irqsave(&iocb->ki_ctx->ctx_lock, flags)) {
+	    spin_trylock_irqsave(&iocb->ki_ctx->ctx_lock, flags)) {
 		struct kioctx *ctx = iocb->ki_ctx;
 
-		/*
-		 * Try to complete the iocb inline if we can. Use
-		 * irqsave/irqrestore because not all filesystems (e.g. fuse)
-		 * call this function with IRQs disabled and because IRQs
-		 * have to be disabled before ctx_lock is obtained.
-		 */
 		list_del_init(&req->wait.entry);
 		list_del(&iocb->ki_list);
 		iocb->ki_res.res = mangle_poll(mask);
