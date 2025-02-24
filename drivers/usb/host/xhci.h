@@ -1293,7 +1293,7 @@ enum xhci_setup_dev {
 /* Set TR Dequeue Pointer command TRB fields, 6.4.3.9 */
 #define TRB_TO_STREAM_ID(p)		((((p) & (0xffff << 16)) >> 16))
 #define STREAM_ID_FOR_TRB(p)		((((p)) & 0xffff) << 16)
-#define SCT_FOR_TRB(p)			(((p) << 1) & 0x7)
+#define SCT_FOR_TRB(p)			(((p) & 0x7) << 1)
 
 /* Link TRB specific fields */
 #define TRB_TC			(1<<1)
@@ -1933,6 +1933,7 @@ struct xhci_hcd {
 #define XHCI_RESET_PLL_ON_DISCONNECT	BIT_ULL(34)
 #define XHCI_SNPS_BROKEN_SUSPEND    BIT_ULL(35)
 #define XHCI_DISABLE_SPARSE	BIT_ULL(38)
+#define XHCI_NO_SOFT_RETRY	BIT_ULL(40)
 #define XHCI_USE_URAM_FOR_EXYNOS_AUDIO	BIT_ULL(62)
 #define XHCI_L2_SUPPORT			BIT_ULL(63)
 

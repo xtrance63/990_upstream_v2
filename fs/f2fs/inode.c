@@ -21,10 +21,13 @@
 
 void f2fs_mark_inode_dirty_sync(struct inode *inode, bool sync)
 {
+	inode_inc_iversion(inode);
+
 	if (is_inode_flag_set(inode, FI_NEW_INODE))
 		return;
 
-	inode_inc_iversion(inode);
+	if (f2fs_readonly(F2FS_I_SB(inode)->sb))
+		return;
 
 	if (f2fs_inode_dirtied(inode, sync))
 		return;
