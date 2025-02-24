@@ -8,9 +8,6 @@
 # published by the Free Software Foundation.
 #
 ccflags-y += $(DISABLE_LTO_CLANG) $(DISABLE_CFI_CLANG) -fno-data-sections -fno-function-sections
-#Keep this at the top
-#FIPS_140_2
-obj-$(CONFIG_CRYPTO_FIPS) += fips140_first_file_asm.o
 
 obj-$(CONFIG_CRYPTO_SHA1_ARM64_CE) += sha1-ce.o
 sha1-ce-y := sha1-ce-glue.o sha1-ce-core.o
@@ -26,10 +23,6 @@ aes-ce-blk-y := aes-glue-ce.o aes-ce.o
 
 obj-$(CONFIG_CRYPTO_GHASH_ARM64_CE) += ghash-ce.o
 ghash-ce-y := ghash-ce-glue.o ghash-ce-core.o
-
-#Keep this at the bottom
-#FIPS_140_2
-obj-$(CONFIG_CRYPTO_FIPS) += fips140_last_file_asm.o
 
 obj-$(CONFIG_CRYPTO_SHA512_ARM64_CE) += sha512-ce.o
 sha512-ce-y := sha512-ce-glue.o sha512-ce-core.o
