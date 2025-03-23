@@ -414,7 +414,9 @@ int psci_cpu_init_idle(unsigned int cpu)
 
 static int psci_suspend_finisher(unsigned long index)
 {
-	return psci_ops.cpu_suspend(index,
+	u32 *state = __this_cpu_read(psci_power_state);
+
+	return psci_ops.cpu_suspend(state[index - 1],
 				    __pa_symbol(cpu_resume));
 }
 
