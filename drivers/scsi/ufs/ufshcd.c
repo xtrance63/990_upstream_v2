@@ -6437,12 +6437,11 @@ static void __ufshcd_transfer_req_compl(struct ufs_hba *hba, int reason,
 	int result;
 	int index;
 	int i;
-	int cpu = raw_smp_processor_id();
-	unsigned int dump_index;
 	u32 offset;
 	void *dma_phy_addr;
-
 #if defined(CONFIG_UFS_DATA_LOG)
+	int cpu = raw_smp_processor_id();
+	unsigned int dump_index;
 #if defined(CONFIG_UFS_DATA_LOG_MAGIC_CODE)
 	struct scatterlist *sg;
 	int sg_segments;
