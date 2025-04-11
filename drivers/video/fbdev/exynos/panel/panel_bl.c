@@ -872,6 +872,10 @@ int panel_update_brightness(struct panel_device *panel)
 	mutex_lock(&panel->op_lock);
 	brightness = bd->props.brightness;
 
+#ifdef CONFIG_ONEUI7_WORKAROUND
+	brightness *= 100;
+#endif
+
 #ifdef CONFIG_SUPPORT_MASK_LAYER
 	if (panel_bl->props.mask_layer_br_hook == MASK_LAYER_HOOK_ON) {
 		brightness = panel_bl->props.mask_layer_br_target;
