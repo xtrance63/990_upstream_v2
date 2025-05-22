@@ -14,6 +14,6 @@
 #ifndef EXTREMEROM_BRIGHTNESS_H
 #define EXTREMEROM_BRIGHTNESS_H
 
-void set_fixed_brightness(int* brightness);
+int get_fixed_brightness(int brightness);
 
 #endif

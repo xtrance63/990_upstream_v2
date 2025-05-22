@@ -751,10 +751,6 @@ int panel_bl_set_brightness(struct panel_bl_device *panel_bl, int id, int force)
 	subdev = &panel_bl->subdev[id];
 	brightness = subdev->brightness;
 
-#ifdef CONFIG_ONEUI7_WORKAROUND
-	set_fixed_brightness(&brightness);
-#endif
-
 	if (!subdev->brt_tbl.brt || subdev->brt_tbl.sz_brt == 0) {
 		panel_err("bl-%d brightness table not exist\n", id);
 		return -EINVAL;
@@ -877,7 +873,9 @@ int panel_update_brightness(struct panel_device *panel)
 	mutex_lock(&panel->op_lock);
 	brightness = bd->props.brightness;
 
-	
+#ifdef CONFIG_ONEUI7_WORKAROUND
+	brightness = get_fixed_brightness(brightness);
+#endif
 
 #ifdef CONFIG_SUPPORT_MASK_LAYER
 	if (panel_bl->props.mask_layer_br_hook == MASK_LAYER_HOOK_ON) {
