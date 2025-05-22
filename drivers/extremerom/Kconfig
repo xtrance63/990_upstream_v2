@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config ONEUI7_WORKAROUND
+ 	depends on EXYNOS_DECON_LCD
+ 	tristate "Multiply brightness value by 100 for OneUI 7 ROM ports"
+ 	default n

@@ -9,6 +9,7 @@
  */
 
 #include <linux/backlight.h>
+#include <linux/extremerom/brightness.h>
 #include "panel.h"
 #include "panel_bl.h"
 #include "copr.h"
@@ -750,6 +751,10 @@ int panel_bl_set_brightness(struct panel_bl_device *panel_bl, int id, int force)
 	subdev = &panel_bl->subdev[id];
 	brightness = subdev->brightness;
 
+#ifdef CONFIG_ONEUI7_WORKAROUND
+	set_fixed_brightness(&brightness);
+#endif
+
 	if (!subdev->brt_tbl.brt || subdev->brt_tbl.sz_brt == 0) {
 		panel_err("bl-%d brightness table not exist\n", id);
 		return -EINVAL;
@@ -856,10 +861,6 @@ static int panel_get_brightness(struct backlight_device *bd)
 	return get_actual_brightness(panel_bl, bd->props.brightness);
 }
 
-#ifdef CONFIG_ONEUI7_WORKAROUND
-static bool bootanim_set_brightness = false;
-#endif
-
 int panel_update_brightness(struct panel_device *panel)
 {
 	int ret = 0;
@@ -876,13 +877,7 @@ int panel_update_brightness(struct panel_device *panel)
 	mutex_lock(&panel->op_lock);
 	brightness = bd->props.brightness;
 
-#ifdef CONFIG_ONEUI7_WORKAROUND
-	// Only work around this if we are past boot animation.
-	if (bootanim_set_brightness)
-		brightness *= 100;
-	else
-		bootanim_set_brightness = true;
-#endif
+	
 
 #ifdef CONFIG_SUPPORT_MASK_LAYER
 	if (panel_bl->props.mask_layer_br_hook == MASK_LAYER_HOOK_ON) {
