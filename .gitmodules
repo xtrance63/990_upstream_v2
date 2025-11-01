@@ -1,3 +1,6 @@
 [submodule "KernelSU-Next"]
 	path = KernelSU-Next
 	url = https://github.com/pershoot/KernelSU-Next.git
+[submodule "Wild_KSU"]
+	path = Wild_KSU
+	url = https://github.com/WildKernels/Wild_KSU.git
